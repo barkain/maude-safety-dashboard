@@ -28,11 +28,15 @@ export default async function ManufacturerPage({ params }: Props) {
   if (!mfr) notFound()
 
   // Synthesise Device stubs from top_devices for the cards
-  const deviceStubs: Device[] = mfr.top_devices.map((td) => ({
-    id:                           td.id,
+  const deviceStubs: Device[] = mfr.top_devices.map((td) => {
+    // top_devices may be {id, name, count} or {key, count} depending on aggregation version
+    const deviceId   = (td as {id?: string; key?: string; name?: string; count: number}).id   ?? (td as {key?: string}).key   ?? ''
+    const deviceName = (td as {name?: string; key?: string}).name ?? (td as {key?: string}).key ?? ''
+    return ({
+    id:                           deviceId,
     manufacturer_id:              mfr.id,
     manufacturer_name:            mfr.name,
-    brand_name:                   td.name,
+    brand_name:                   deviceName,
     generic_name:                 '',
     product_code:                 '',
     device_class:                 'Class II',
@@ -50,7 +54,7 @@ export default async function ManufacturerPage({ params }: Props) {
     recall_risk_score:            mfr.recall_risk_score,
     risk_tier:                    mfr.risk_tier,
     projected_event_rate_trend:   mfr.projected_event_rate_trend,
-  }))
+  })
 
   const deviceClassEntries = Object.entries(mfr.device_classes).sort(
     ([, a], [, b]) => b - a,

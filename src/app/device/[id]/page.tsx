@@ -136,14 +136,21 @@ export default async function DevicePage({ params }: Props) {
         <section className="mt-8">
           <h2 className="mb-3 text-base font-semibold text-gray-800">Top Reported Problems</h2>
           <ol className="space-y-2">
-            {device.top_problems.map((p, i) => (
-              <li key={i} className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-2.5 shadow-sm">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-bold text-brand-700">
-                  {i + 1}
-                </span>
-                <span className="text-sm text-gray-700">{p}</span>
-              </li>
-            ))}
+            {device.top_problems.map((p, i) => {
+              const label = typeof p === 'string' ? p : (p as {problem: string; count?: number}).problem
+              const count = typeof p === 'string' ? null : (p as {problem: string; count?: number}).count
+              return (
+                <li key={i} className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-2.5 shadow-sm">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-bold text-brand-700">
+                    {i + 1}
+                  </span>
+                  <span className="flex-1 text-sm text-gray-700">{label}</span>
+                  {count != null && (
+                    <span className="text-xs text-gray-400">{count} reports</span>
+                  )}
+                </li>
+              )
+            })}
           </ol>
         </section>
       )}
