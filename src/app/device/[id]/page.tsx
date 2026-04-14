@@ -16,7 +16,7 @@ interface Props {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const device = await getDevice(params.id)
+  const device = await getDevice(decodeURIComponent(params.id))
   if (!device) return { title: 'Device Not Found' }
   return { title: `${device.brand_name} — ${device.generic_name}` }
 }
@@ -28,7 +28,7 @@ const classColors: Record<string, string> = {
 }
 
 export default async function DevicePage({ params }: Props) {
-  const device = await getDevice(params.id)
+  const device = await getDevice(decodeURIComponent(params.id))
   if (!device) notFound()
 
   const cls = classColors[device.device_class] ?? 'bg-gray-100 text-gray-700 ring-gray-300'

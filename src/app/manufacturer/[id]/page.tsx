@@ -18,13 +18,13 @@ interface Props {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const mfr = await getManufacturer(params.id)
+  const mfr = await getManufacturer(decodeURIComponent(params.id))
   if (!mfr) return { title: 'Manufacturer Not Found' }
   return { title: mfr.name }
 }
 
 export default async function ManufacturerPage({ params }: Props) {
-  const mfr = await getManufacturer(params.id)
+  const mfr = await getManufacturer(decodeURIComponent(params.id))
   if (!mfr) notFound()
 
   // Synthesise Device stubs from top_devices for the cards

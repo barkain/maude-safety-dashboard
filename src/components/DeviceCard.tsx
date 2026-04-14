@@ -19,7 +19,7 @@ export default function DeviceCard({ device }: DeviceCardProps) {
 
   return (
     <Link
-      href={`/device/${device.id}`}
+      href={`/device/${encodeURIComponent(device.id)}`}
       className="block rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md hover:border-brand-300"
     >
       <div className="flex items-start justify-between gap-2">

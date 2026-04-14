@@ -11,7 +11,7 @@ interface ManufacturerCardProps {
 export default function ManufacturerCard({ manufacturer: m }: ManufacturerCardProps) {
   return (
     <Link
-      href={`/manufacturer/${m.id}`}
+      href={`/manufacturer/${encodeURIComponent(m.id)}`}
       className="block rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md hover:border-brand-300"
     >
       <div className="flex items-start justify-between gap-2">
