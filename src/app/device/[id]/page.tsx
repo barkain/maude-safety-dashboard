@@ -39,7 +39,7 @@ export default async function DevicePage({ params }: Props) {
       <nav className="mb-4 text-xs text-gray-400">
         <Link href="/" className="hover:text-brand-600">Home</Link>
         <span className="mx-1">/</span>
-        <Link href={`/manufacturer/${device.manufacturer_id}`} className="hover:text-brand-600">
+        <Link href={`/manufacturer/${encodeURIComponent(device.manufacturer_id)}`} className="hover:text-brand-600">
           {device.manufacturer_name}
         </Link>
         <span className="mx-1">/</span>
@@ -62,7 +62,7 @@ export default async function DevicePage({ params }: Props) {
           </div>
           <p className="mt-1 text-sm text-gray-500">{device.generic_name}</p>
           <Link
-            href={`/manufacturer/${device.manufacturer_id}`}
+            href={`/manufacturer/${encodeURIComponent(device.manufacturer_id)}`}
             className="mt-0.5 inline-block text-xs text-brand-600 hover:underline"
           >
             {device.manufacturer_name}
@@ -158,7 +158,7 @@ export default async function DevicePage({ params }: Props) {
       {/* ── Back link ── */}
       <div className="mt-10">
         <Link
-          href={`/manufacturer/${device.manufacturer_id}`}
+          href={`/manufacturer/${encodeURIComponent(device.manufacturer_id)}`}
           className="text-sm text-brand-600 hover:underline"
         >
           ← Back to {device.manufacturer_name}

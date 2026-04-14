@@ -55,6 +55,7 @@ export default async function ManufacturerPage({ params }: Props) {
     risk_tier:                    mfr.risk_tier,
     projected_event_rate_trend:   mfr.projected_event_rate_trend,
   })
+  })
 
   const deviceClassEntries = Object.entries(mfr.device_classes).sort(
     ([, a], [, b]) => b - a,
