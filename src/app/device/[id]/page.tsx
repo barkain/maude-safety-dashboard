@@ -31,6 +31,9 @@ export default async function DevicePage({ params }: Props) {
   const device = await getDevice(decodeURIComponent(params.id))
   if (!device) notFound()
 
+  // manufacturer_id may be null in Firestore docs — derive it from the device ID (format: "mfr_key:product_code")
+  const manufacturerId = device.manufacturer_id ?? (device.id.includes(':') ? device.id.split(':')[0] : device.id)
+
   const cls = classColors[device.device_class] ?? 'bg-gray-100 text-gray-700 ring-gray-300'
 
   return (
@@ -39,7 +42,7 @@ export default async function DevicePage({ params }: Props) {
       <nav className="mb-4 text-xs text-gray-400">
         <Link href="/" className="hover:text-brand-600">Home</Link>
         <span className="mx-1">/</span>
-        <Link href={`/manufacturer/${encodeURIComponent(device.manufacturer_id)}`} className="hover:text-brand-600">
+        <Link href={`/manufacturer/${encodeURIComponent(manufacturerId)}`} className="hover:text-brand-600">
           {device.manufacturer_name}
         </Link>
         <span className="mx-1">/</span>
@@ -62,7 +65,7 @@ export default async function DevicePage({ params }: Props) {
           </div>
           <p className="mt-1 text-sm text-gray-500">{device.generic_name}</p>
           <Link
-            href={`/manufacturer/${encodeURIComponent(device.manufacturer_id)}`}
+            href={`/manufacturer/${encodeURIComponent(manufacturerId)}`}
             className="mt-0.5 inline-block text-xs text-brand-600 hover:underline"
           >
             {device.manufacturer_name}
@@ -158,7 +161,7 @@ export default async function DevicePage({ params }: Props) {
       {/* ── Back link ── */}
       <div className="mt-10">
         <Link
-          href={`/manufacturer/${encodeURIComponent(device.manufacturer_id)}`}
+          href={`/manufacturer/${encodeURIComponent(manufacturerId)}`}
           className="text-sm text-brand-600 hover:underline"
         >
           ← Back to {device.manufacturer_name}

@@ -102,14 +102,33 @@ export async function searchDevices(queryStr: string): Promise<Device[]> {
     )
   }
 
-  // Same prefix-match approach for brand_name_lower
+  // Run parallel prefix-match queries on brand_name_lower and generic_name_lower,
+  // then merge + deduplicate so searches like "insulin pump" find generic-name matches.
   const lower = queryStr.toLowerCase()
-  const q = query(
-    collection(getDb(), 'devices'),
-    where('brand_name_lower', '>=', lower),
-    where('brand_name_lower', '<=', lower + '\uf8ff'),
-    fsLimit(20),
-  )
-  const snap = await getDocs(q)
-  return snap.docs.map((d) => snapToDevice(d.data(), d.id))
+  const makeQuery = (field: string) =>
+    getDocs(
+      query(
+        collection(getDb(), 'devices'),
+        where(field, '>=', lower),
+        where(field, '<=', lower + '\uf8ff'),
+        fsLimit(15),
+      ),
+    )
+
+  const [brandSnap, genericSnap] = await Promise.all([
+    makeQuery('brand_name_lower'),
+    makeQuery('generic_name_lower'),
+  ])
+
+  const seen = new Set<string>()
+  const results: Device[] = []
+  for (const snap of [brandSnap, genericSnap]) {
+    for (const d of snap.docs) {
+      if (!seen.has(d.id)) {
+        seen.add(d.id)
+        results.push(snapToDevice(d.data(), d.id))
+      }
+    }
+  }
+  return results.slice(0, 20)
 }

@@ -30,7 +30,9 @@ export default async function ManufacturerPage({ params }: Props) {
   // Synthesise Device stubs from top_devices for the cards
   const deviceStubs: Device[] = mfr.top_devices.map((td) => {
     // top_devices may be {id, name, count} or {key, count} depending on aggregation version
-    const deviceId   = (td as {id?: string; key?: string; name?: string; count: number}).id   ?? (td as {key?: string}).key   ?? ''
+    const rawKey     = (td as {id?: string; key?: string; name?: string; count: number}).id ?? (td as {key?: string}).key ?? ''
+    // Device Firestore IDs have the format "mfr_id:product_code" — stitch it together if needed
+    const deviceId   = rawKey.includes(':') ? rawKey : `${mfr.id}:${rawKey}`
     const deviceName = (td as {name?: string; key?: string}).name ?? (td as {key?: string}).key ?? ''
     return ({
     id:                           deviceId,
