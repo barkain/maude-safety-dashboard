@@ -64,8 +64,8 @@ export default function SearchBar({
     if (onSelect) { onSelect(result); return }
     const path =
       result.kind === 'manufacturer'
-        ? `/manufacturer/${result.data.id}`
-        : `/device/${result.data.id}`
+        ? `/manufacturer/${encodeURIComponent(result.data.id)}`
+        : `/device/${encodeURIComponent(result.data.id)}`
     router.push(path)
   }
 
@@ -94,7 +94,7 @@ export default function SearchBar({
             onFocus={() => results.length > 0 && setOpen(true)}
             placeholder="Search devices, manufacturers…"
             autoFocus={autoFocus}
-            className="w-full rounded-xl border border-gray-300 bg-white py-3 pl-11 pr-4 text-sm shadow-sm transition focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-200"
+            className="w-full rounded-xl border border-gray-300 bg-white py-3 pl-11 pr-4 text-sm text-gray-900 placeholder-gray-400 shadow-sm transition focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-200"
           />
           {loading && (
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
