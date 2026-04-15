@@ -69,7 +69,7 @@ export default async function ManufacturerPage({ params }: Props) {
       <nav className="mb-4 text-xs text-gray-400">
         <Link href="/" className="hover:text-brand-600">Home</Link>
         <span className="mx-1">/</span>
-        <span className="text-gray-600">Manufacturers</span>
+        <Link href="/" className="hover:text-brand-600">Manufacturers</Link>
         <span className="mx-1">/</span>
         <span className="text-gray-900">{mfr.name}</span>
       </nav>
@@ -120,6 +120,7 @@ export default async function ManufacturerPage({ params }: Props) {
             <RiskScoreGauge
               score={mfr.supply_chain_risk_score}
               label="Supply Chain Risk Score"
+              overrideTier={mfr.risk_tier}
             />
           </div>
           {/* Badges */}

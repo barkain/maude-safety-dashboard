@@ -59,7 +59,8 @@ export default function CompareSelector({ id, name, type }: CompareSelectorProps
   }
 
   function compare() {
-    router.push(`/compare?ids=${ids.join(',')}&type=${type}`)
+    // Use '|' as separator — IDs contain commas (e.g. "dexcom, inc") which break split(',')
+    router.push(`/compare?ids=${ids.map(encodeURIComponent).join('|')}&type=${type}`)
   }
 
   const count = ids.length

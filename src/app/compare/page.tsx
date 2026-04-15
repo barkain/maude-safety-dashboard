@@ -14,7 +14,7 @@ interface Props {
 }
 
 export default async function ComparePage({ searchParams }: Props) {
-  const rawIds = (searchParams.ids ?? '').split(',').map((s) => s.trim()).filter(Boolean)
+  const rawIds = (searchParams.ids ?? '').split('|').map((s) => decodeURIComponent(s.trim())).filter(Boolean)
   const type   = searchParams.type === 'device' ? 'device' : 'manufacturer'
 
   // Fetch all entities in parallel

@@ -3,22 +3,32 @@ interface RiskScoreGaugeProps {
   score: number
   label?: string
   className?: string
+  /** Override the tier label (HIGH/MEDIUM/LOW) instead of computing from score */
+  overrideTier?: string
 }
 
-function getTierFromScore(score: number): { tier: string; color: string; barColor: string } {
-  if (score >= 6) return { tier: 'HIGH',   color: 'text-red-700',    barColor: 'bg-red-500'    }
-  if (score >= 3) return { tier: 'MEDIUM', color: 'text-yellow-700', barColor: 'bg-yellow-400' }
-  return             { tier: 'LOW',    color: 'text-green-700',  barColor: 'bg-green-500'  }
+function getTierStyle(tier: string): { color: string; barColor: string } {
+  if (tier === 'HIGH')   return { color: 'text-red-700',    barColor: 'bg-red-500'    }
+  if (tier === 'MEDIUM') return { color: 'text-yellow-700', barColor: 'bg-yellow-400' }
+  return                        { color: 'text-green-700',  barColor: 'bg-green-500'  }
+}
+
+function computeTier(score: number): string {
+  if (score >= 6) return 'HIGH'
+  if (score >= 3) return 'MEDIUM'
+  return 'LOW'
 }
 
 export default function RiskScoreGauge({
   score,
   label = 'Supply Chain Risk',
   className = '',
+  overrideTier,
 }: RiskScoreGaugeProps) {
   const clamped = Math.max(0, Math.min(10, score))
   const pct     = (clamped / 10) * 100
-  const { tier, color, barColor } = getTierFromScore(clamped)
+  const tier    = overrideTier ?? computeTier(clamped)
+  const { color, barColor } = getTierStyle(tier)
 
   return (
     <div className={`rounded-xl border border-gray-200 bg-white p-4 shadow-sm ${className}`}>

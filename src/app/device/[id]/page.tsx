@@ -111,6 +111,7 @@ export default async function DevicePage({ params }: Props) {
         <RiskScoreGauge
           score={device.recall_risk_score * 10}
           label="Recall Risk Score"
+          overrideTier={device.risk_tier}
         />
       </div>
 
