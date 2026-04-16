@@ -121,6 +121,7 @@ export default async function DevicePage({ params }: Props) {
           <EventTrendChart
             eventsByMonth={device.events_by_month}
             title="Events per Month (Last 12 mo)"
+            trend={device.projected_event_rate_trend}
           />
         ) : (
           <div className="rounded-xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-400 shadow-sm">
