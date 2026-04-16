@@ -42,6 +42,7 @@ export const MOCK_MANUFACTURERS: Manufacturer[] = [
     countries: ['USA', 'Ireland', 'China', 'Puerto Rico', 'Costa Rica'],
     risk_tier: 'HIGH',
     recall_risk_score: 0.74,
+    specialties: [],
     projected_event_rate_trend: 'INCREASING',
   },
   {
@@ -68,6 +69,7 @@ export const MOCK_MANUFACTURERS: Manufacturer[] = [
     countries: ['USA', 'Germany', 'Netherlands', 'Mexico'],
     risk_tier: 'MEDIUM',
     recall_risk_score: 0.52,
+    specialties: [],
     projected_event_rate_trend: 'STABLE',
   },
   {
@@ -94,6 +96,7 @@ export const MOCK_MANUFACTURERS: Manufacturer[] = [
     countries: ['USA', 'Ireland', 'Malaysia', 'Japan', 'Costa Rica'],
     risk_tier: 'HIGH',
     recall_risk_score: 0.65,
+    specialties: [],
     projected_event_rate_trend: 'STABLE',
   },
   {
@@ -119,6 +122,7 @@ export const MOCK_MANUFACTURERS: Manufacturer[] = [
     countries: ['USA', 'Germany', 'Ireland'],
     risk_tier: 'LOW',
     recall_risk_score: 0.31,
+    specialties: [],
     projected_event_rate_trend: 'DECREASING',
   },
   {
@@ -144,6 +148,7 @@ export const MOCK_MANUFACTURERS: Manufacturer[] = [
     countries: ['USA', 'Mexico', 'Brazil', 'Singapore', 'France'],
     risk_tier: 'LOW',
     recall_risk_score: 0.28,
+    specialties: [],
     projected_event_rate_trend: 'DECREASING',
   },
 ]
