@@ -1,0 +1,45 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "manufacturers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "name_lower", "order": "ASCENDING" },
+        { "fieldPath": "total_events", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "manufacturers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "risk_tier", "order": "ASCENDING" },
+        { "fieldPath": "total_events", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "devices",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "brand_name_lower", "order": "ASCENDING" },
+        { "fieldPath": "total_events", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "devices",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "generic_name_lower", "order": "ASCENDING" },
+        { "fieldPath": "total_events", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "devices",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "risk_tier", "order": "ASCENDING" },
+        { "fieldPath": "total_events", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

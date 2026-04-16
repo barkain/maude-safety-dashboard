@@ -71,7 +71,10 @@ export default function SearchBar({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (results.length > 0) handleSelect(results[0])
+    if (!query.trim()) return
+    setOpen(false)
+    // Navigate to full search results page (supports NL search)
+    router.push(`/search?q=${encodeURIComponent(query.trim())}`)
   }
 
   return (
@@ -92,10 +95,18 @@ export default function SearchBar({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => results.length > 0 && setOpen(true)}
-            placeholder="Search devices, manufacturers…"
+            placeholder='Search devices, manufacturers, or ask in plain English…'
             autoFocus={autoFocus}
-            className="w-full rounded-xl border border-gray-300 bg-white py-3 pl-11 pr-4 text-sm text-gray-900 placeholder-gray-400 shadow-sm transition focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-200"
+            className="w-full rounded-xl border border-gray-300 bg-white py-3 pl-11 pr-28 text-sm text-gray-900 placeholder-gray-400 shadow-sm transition focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-200"
           />
+          <div className="absolute inset-y-0 right-0 flex items-center pr-2">
+            <button
+              type="submit"
+              className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700"
+            >
+              Search
+            </button>
+          </div>
           {loading && (
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-brand-400 border-t-transparent" />
