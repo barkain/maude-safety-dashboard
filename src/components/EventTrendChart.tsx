@@ -8,33 +8,94 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  ReferenceLine,
 } from 'recharts'
-import { format, parse } from 'date-fns'
-import type { MonthlyDataPoint } from '@/lib/types'
+import { format, parse, addMonths } from 'date-fns'
+import type { MonthlyDataPoint, EventRateTrend } from '@/lib/types'
 
 interface EventTrendChartProps {
   eventsByMonth: Record<string, number>
   title?: string
+  trend?: EventRateTrend
+  projectMonths?: number
 }
 
-function toChartData(eventsByMonth: Record<string, number>): MonthlyDataPoint[] {
-  return Object.entries(eventsByMonth)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, events]) => {
-      const date = parse(key, 'yyyy-MM', new Date())
-      return { month: format(date, 'MMM yy'), events }
-    })
+interface ChartPoint {
+  month: string
+  events?: number
+  projected?: number
+}
+
+function toChartData(
+  eventsByMonth: Record<string, number>,
+  trend: EventRateTrend = 'UNKNOWN',
+  projectMonths = 3,
+): ChartPoint[] {
+  const sorted = Object.entries(eventsByMonth).sort(([a], [b]) => a.localeCompare(b))
+  if (sorted.length === 0) return []
+
+  // Historical points
+  const historical: ChartPoint[] = sorted.map(([key, events]) => {
+    const date = parse(key, 'yyyy-MM', new Date())
+    return { month: format(date, 'MMM yy'), events }
+  })
+
+  if (trend === 'UNKNOWN' || projectMonths === 0) return historical
+
+  // Calculate slope from last 3 months of real data
+  const recent = sorted.slice(-3).map(([, v]) => v)
+  const avgRecent = recent.reduce((a, b) => a + b, 0) / recent.length
+
+  const growthRate =
+    trend === 'INCREASING' ? 0.07
+    : trend === 'DECREASING' ? -0.07
+    : 0.01  // STABLE — tiny drift
+
+  // Last real date to start projecting from
+  const lastKey = sorted[sorted.length - 1][0]
+  const lastDate = parse(lastKey, 'yyyy-MM', new Date())
+  const lastValue = sorted[sorted.length - 1][1]
+
+  // Bridge: last historical point carries both events and projected
+  historical[historical.length - 1].projected = lastValue
+
+  const projections: ChartPoint[] = Array.from({ length: projectMonths }, (_, i) => {
+    const projDate  = addMonths(lastDate, i + 1)
+    const projected = Math.max(0, Math.round(avgRecent * Math.pow(1 + growthRate, i + 1)))
+    return { month: format(projDate, 'MMM yy'), projected }
+  })
+
+  return [...historical, ...projections]
 }
 
 export default function EventTrendChart({
   eventsByMonth,
   title = 'Events per Month',
+  trend = 'UNKNOWN',
+  projectMonths = 3,
 }: EventTrendChartProps) {
-  const data = toChartData(eventsByMonth)
+  const data = toChartData(eventsByMonth, trend, projectMonths)
+  const hasProjection = trend !== 'UNKNOWN' && projectMonths > 0
+  // Index where projection starts (last historical point)
+  const splitMonth = data.findLast?.((d) => d.events !== undefined)?.month
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-      <h3 className="mb-3 text-sm font-semibold text-gray-700">{title}</h3>
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-gray-700">{title}</h3>
+        {hasProjection && (
+          <div className="flex items-center gap-3 text-[10px] text-gray-400">
+            <span className="flex items-center gap-1">
+              <span className="inline-block h-0.5 w-4 bg-blue-500" />
+              Actual
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block h-0.5 w-4 border-t-2 border-dashed border-blue-300" />
+              Projected
+            </span>
+          </div>
+        )}
+      </div>
       <ResponsiveContainer width="100%" height={220}>
         <LineChart data={data} margin={{ top: 4, right: 12, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -60,8 +121,21 @@ export default function EventTrendChart({
               boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
               fontSize: 12,
             }}
-            formatter={(value: number) => [value.toLocaleString(), 'Events']}
+            formatter={(value: number, name: string) => [
+              value.toLocaleString(),
+              name === 'projected' ? 'Projected events' : 'Events',
+            ]}
           />
+          {/* Divider between actual and projected */}
+          {hasProjection && splitMonth && (
+            <ReferenceLine
+              x={splitMonth}
+              stroke="#d1d5db"
+              strokeDasharray="4 2"
+              label={{ value: 'Today', position: 'insideTopRight', fontSize: 10, fill: '#9ca3af' }}
+            />
+          )}
+          {/* Actual line */}
           <Line
             type="monotone"
             dataKey="events"
@@ -69,7 +143,21 @@ export default function EventTrendChart({
             strokeWidth={2}
             dot={false}
             activeDot={{ r: 4 }}
+            connectNulls={false}
           />
+          {/* Projected line — dashed */}
+          {hasProjection && (
+            <Line
+              type="monotone"
+              dataKey="projected"
+              stroke="#93c5fd"
+              strokeWidth={2}
+              strokeDasharray="6 3"
+              dot={false}
+              activeDot={{ r: 3 }}
+              connectNulls={false}
+            />
+          )}
         </LineChart>
       </ResponsiveContainer>
     </div>
