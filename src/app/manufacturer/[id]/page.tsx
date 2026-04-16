@@ -163,6 +163,24 @@ export default async function ManufacturerPage({ params }: Props) {
         />
       </div>
 
+      {/* ── Medical specialties ── */}
+      {Array.isArray(mfr.specialties) && mfr.specialties.length > 0 && (
+        <section className="mt-8">
+          <h2 className="mb-3 text-base font-semibold text-gray-800">Medical Specialties</h2>
+          <div className="flex flex-wrap gap-2">
+            {(mfr.specialties as string[]).map((s) => (
+              <Link
+                key={s}
+                href={`/search?q=${encodeURIComponent(s)}`}
+                className="rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700 shadow-sm transition hover:bg-brand-100"
+              >
+                {s}
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* ── Device classes ── */}
       <section className="mt-8">
         <h2 className="mb-3 text-base font-semibold text-gray-800">Device Classes</h2>

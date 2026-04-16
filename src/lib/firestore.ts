@@ -69,6 +69,38 @@ export async function searchManufacturers(queryStr: string): Promise<Manufacture
   return snap.docs.map((d) => snapToManufacturer(d.data(), d.id))
 }
 
+/** Fetch manufacturers with HIGH risk tier, sorted by total_events desc */
+export async function getHighRiskManufacturers(n = 6): Promise<Manufacturer[]> {
+  if (USE_MOCK) return MOCK_MANUFACTURERS.filter((m) => m.risk_tier === 'HIGH').slice(0, n)
+
+  const q = query(
+    collection(getDb(), 'manufacturers'),
+    where('risk_tier', '==', 'HIGH'),
+    fsLimit(50),
+  )
+  const snap = await getDocs(q)
+  return snap.docs
+    .map((d) => snapToManufacturer(d.data(), d.id))
+    .sort((a, b) => b.total_events - a.total_events)
+    .slice(0, n)
+}
+
+/** Fetch devices with HIGH risk tier, sorted by total_events desc */
+export async function getHighRiskDevices(n = 6): Promise<Device[]> {
+  if (USE_MOCK) return MOCK_DEVICES.filter((d) => d.risk_tier === 'HIGH').slice(0, n)
+
+  const q = query(
+    collection(getDb(), 'devices'),
+    where('risk_tier', '==', 'HIGH'),
+    fsLimit(50),
+  )
+  const snap = await getDocs(q)
+  return snap.docs
+    .map((d) => snapToDevice(d.data(), d.id))
+    .sort((a, b) => b.total_events - a.total_events)
+    .slice(0, n)
+}
+
 // ── Devices ───────────────────────────────────────────────────────────────────
 
 export async function getTopDevices(n = 10): Promise<Device[]> {

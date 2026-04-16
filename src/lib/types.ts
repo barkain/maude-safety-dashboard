@@ -19,6 +19,7 @@ export interface Manufacturer {
   events_by_month: Record<string, number>         // "2025-01": 42
   top_devices: Array<{ id: string; name: string; count: number }>
   device_classes: Record<string, number>          // "Class 2": 450
+  specialties: string[]
   last_updated: Timestamp | null
   // ── Predictive / supply chain fields ────────────────────────────────────
   supply_chain_risk_score: number                 // 0–10
