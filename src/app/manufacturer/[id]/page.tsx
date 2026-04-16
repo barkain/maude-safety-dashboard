@@ -154,7 +154,7 @@ export default async function ManufacturerPage({ params }: Props) {
 
       {/* ── Charts row ── */}
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        <EventTrendChart eventsByMonth={mfr.events_by_month} title="Events per Month (Last 12 mo)" />
+        <EventTrendChart eventsByMonth={mfr.events_by_month} title="Events per Month (Last 12 mo)" trend={mfr.projected_event_rate_trend} />
         <SeverityBreakdown
           deathCount={mfr.death_count}
           injuryCount={mfr.injury_count}
