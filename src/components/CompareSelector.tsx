@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 
 interface CompareSelectorProps {
   id: string
@@ -9,134 +8,109 @@ interface CompareSelectorProps {
   type: 'manufacturer' | 'device'
 }
 
-const STORAGE_KEY = 'maude_compare_ids'
-const MAX_ITEMS   = 4
+export const COMPARE_STORAGE_KEY  = 'maude_compare_ids'
+export const COMPARE_TYPE_KEY     = 'maude_compare_type'
+export const COMPARE_CHANGE_EVENT = 'maude_compare_change'
+const MAX_ITEMS = 4
 
-function readStorage(): string[] {
+export function readCompareIds(): string[] {
   if (typeof window === 'undefined') return []
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]')
-  } catch {
-    return []
-  }
+  try { return JSON.parse(localStorage.getItem(COMPARE_STORAGE_KEY) ?? '[]') } catch { return [] }
 }
 
-function writeStorage(ids: string[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(ids))
+export function readCompareType(): 'manufacturer' | 'device' | null {
+  if (typeof window === 'undefined') return null
+  const t = localStorage.getItem(COMPARE_TYPE_KEY)
+  return t === 'manufacturer' || t === 'device' ? t : null
 }
 
-export default function CompareSelector({ id, name, type }: CompareSelectorProps) {
-  const router = useRouter()
-  const [ids,        setIds]        = useState<string[]>([])
-  const [isSelected, setIsSelected] = useState(false)
-  const [open,       setOpen]       = useState(false)
+export function writeCompareIds(ids: string[], type?: 'manufacturer' | 'device'): void {
+  localStorage.setItem(COMPARE_STORAGE_KEY, JSON.stringify(ids))
+  if (type) localStorage.setItem(COMPARE_TYPE_KEY, type)
+  if (ids.length === 0) localStorage.removeItem(COMPARE_TYPE_KEY)
+  window.dispatchEvent(new Event(COMPARE_CHANGE_EVENT))
+}
 
-  // Hydrate from localStorage on mount
-  useEffect(() => {
-    const stored = readStorage()
-    setIds(stored)
+export default function CompareSelector({ id, type }: CompareSelectorProps) {
+  const [isSelected,   setIsSelected]   = useState(false)
+  const [count,        setCount]        = useState(0)
+  const [currentType,  setCurrentType]  = useState<'manufacturer' | 'device' | null>(null)
+
+  function sync() {
+    const stored = readCompareIds()
     setIsSelected(stored.includes(id))
+    setCount(stored.length)
+    setCurrentType(readCompareType())
+  }
+
+  useEffect(() => {
+    sync()
+    window.addEventListener(COMPARE_CHANGE_EVENT, sync)
+    return () => window.removeEventListener(COMPARE_CHANGE_EVENT, sync)
   }, [id])
 
   function toggle() {
-    const stored = readStorage()
+    const stored = readCompareIds()
     let next: string[]
     if (stored.includes(id)) {
       next = stored.filter((x) => x !== id)
+      writeCompareIds(next, next.length > 0 ? type : undefined)
     } else {
-      if (stored.length >= MAX_ITEMS) return // silently cap
+      // If basket has a different type, clear it and start fresh
+      if (currentType && currentType !== type) {
+        writeCompareIds([id], type)
+        return
+      }
+      if (stored.length >= MAX_ITEMS) return
       next = [...stored, id]
+      writeCompareIds(next, type)
     }
-    writeStorage(next)
-    setIds(next)
-    setIsSelected(next.includes(id))
   }
 
-  function clear() {
-    writeStorage([])
-    setIds([])
-    setIsSelected(false)
-  }
-
-  function compare() {
-    // Use '|' as separator — IDs contain commas (e.g. "dexcom, inc") which break split(',')
-    router.push(`/compare?ids=${ids.map(encodeURIComponent).join('|')}&type=${type}`)
-  }
-
-  const count = ids.length
+  const typeMismatch = !isSelected && count > 0 && currentType !== null && currentType !== type
+  const atMax        = !isSelected && !typeMismatch && count >= MAX_ITEMS
 
   return (
-    <div className="relative">
-      {/* Floating trigger button */}
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="inline-flex items-center gap-1.5 rounded-full border border-brand-300 bg-white px-3 py-1.5 text-xs font-semibold text-brand-700 shadow-sm transition hover:bg-brand-50"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-          className="h-3.5 w-3.5"
-        >
-          <path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" />
-        </svg>
-        Compare
-        {count > 0 && (
-          <span className="ml-0.5 rounded-full bg-brand-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
-            {count}
-          </span>
-        )}
-      </button>
-
-      {/* Dropdown panel */}
-      {open && (
-        <div className="absolute right-0 z-50 mt-2 w-64 rounded-xl border border-gray-200 bg-white p-4 shadow-lg">
-          <p className="mb-1 text-xs font-semibold text-gray-700">Compare Mode</p>
-          <p className="mb-3 text-[11px] text-gray-400">Select up to {MAX_ITEMS} items</p>
-
-          {/* Add / remove current item */}
-          <button
-            onClick={toggle}
-            disabled={!isSelected && count >= MAX_ITEMS}
-            className={`mb-3 w-full rounded-lg px-3 py-2 text-xs font-semibold transition ${
-              isSelected
-                ? 'bg-red-50 text-red-700 hover:bg-red-100'
-                : count >= MAX_ITEMS
-                ? 'cursor-not-allowed bg-gray-100 text-gray-400'
-                : 'bg-brand-50 text-brand-700 hover:bg-brand-100'
-            }`}
-          >
-            {isSelected
-              ? `Remove "${name.length > 22 ? name.slice(0, 22) + '…' : name}"`
-              : count >= MAX_ITEMS
-              ? 'Max 4 items reached'
-              : `Add "${name.length > 22 ? name.slice(0, 22) + '…' : name}"`}
-          </button>
-
-          {/* Status */}
-          <p className="mb-3 text-center text-[11px] text-gray-500">
-            {count === 0 ? 'No items selected' : `${count} item${count > 1 ? 's' : ''} selected`}
-          </p>
-
-          {/* Action buttons */}
-          <div className="flex gap-2">
-            <button
-              onClick={compare}
-              disabled={count < 2}
-              className="flex-1 rounded-lg bg-brand-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Compare
-            </button>
-            <button
-              onClick={clear}
-              disabled={count === 0}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Clear
-            </button>
-          </div>
-        </div>
+    <button
+      onClick={toggle}
+      disabled={atMax}
+      title={
+        typeMismatch ? `Currently comparing ${currentType}s — click to start a new comparison`
+        : atMax      ? 'Maximum 4 items for comparison'
+        : undefined
+      }
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm transition ${
+        isSelected
+          ? 'border-brand-400 bg-brand-50 text-brand-700 hover:bg-red-50 hover:text-red-600 hover:border-red-300'
+          : typeMismatch
+          ? 'border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100'
+          : atMax
+          ? 'cursor-not-allowed border-gray-200 bg-gray-50 text-gray-400'
+          : 'border-brand-300 bg-white text-brand-700 hover:bg-brand-50'
+      }`}
+    >
+      {isSelected ? (
+        <>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+            <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+          </svg>
+          Added to comparison
+        </>
+      ) : typeMismatch ? (
+        <>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+            <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+          </svg>
+          New comparison
+        </>
+      ) : (
+        <>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+            <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+          </svg>
+          {atMax ? 'Max reached' : 'Add to comparison'}
+        </>
       )}
-    </div>
+    </button>
   )
 }
