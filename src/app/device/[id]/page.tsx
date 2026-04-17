@@ -180,15 +180,22 @@ export default async function DevicePage({ params }: Props) {
         {device.medical_specialty && (
           <span>Specialty: <span className="font-medium text-gray-600">{device.medical_specialty}</span></span>
         )}
-        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ring-inset ${
-          device.severity_score >= 75
+        {(() => {
+          const sev = Math.min(Math.round(device.severity_score), 100)
+          const cls = sev >= 75
             ? 'bg-red-100 text-red-700 ring-red-300'
-            : device.severity_score >= 50
+            : sev >= 50
             ? 'bg-orange-100 text-orange-700 ring-orange-300'
             : 'bg-yellow-100 text-yellow-700 ring-yellow-300'
-        }`}>
-          Severity {device.severity_score}/100
-        </span>
+          return (
+            <span
+              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ring-inset cursor-help ${cls}`}
+              title="Severity score (0–100): a weighted composite of the death rate, injury rate, and recall rate for this device. Higher = more adverse outcomes relative to total events."
+            >
+              Severity {sev}/100
+            </span>
+          )
+        })()}
       </div>
 
       {/* ── About this device ── */}
