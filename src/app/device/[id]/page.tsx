@@ -59,7 +59,7 @@ async function fetchFdaClassification(productCode: string): Promise<FdaClassific
   try {
     const res = await fetch(
       `https://api.fda.gov/device/classification.json?search=product_code:${productCode}&limit=1`,
-      { next: { revalidate: 86400 } } // cache 24h
+      { next: { revalidate: 86400 }, signal: AbortSignal.timeout(5000) } // cache 24h
     )
     if (!res.ok) return null
     const data = await res.json()
@@ -197,7 +197,10 @@ export default async function DevicePage({ params }: Props) {
           <h2 className="mb-3 text-base font-semibold text-gray-800">About This Device</h2>
 
           {aiDescription && (
-            <p className="mb-4 text-sm leading-relaxed text-gray-600">{aiDescription}</p>
+            <div className="mb-4">
+              <p className="text-sm leading-relaxed text-gray-600">{aiDescription}</p>
+              <p className="mt-1 text-[10px] text-gray-400">AI-generated summary — verify against manufacturer documentation.</p>
+            </div>
           )}
 
           {fdaClass && (
@@ -254,7 +257,9 @@ export default async function DevicePage({ params }: Props) {
                 <p className={`mt-0.5 text-sm font-semibold ${
                   fdaClass.life_sustain_support_flag === 'Y' ? 'text-red-600' : 'text-gray-600'
                 }`}>
-                  {fdaClass.life_sustain_support_flag === 'Y' ? 'Yes' : 'No'}
+                  {fdaClass.life_sustain_support_flag === 'Y' ? 'Yes'
+                    : fdaClass.life_sustain_support_flag === 'N' ? 'No'
+                    : '—'}
                 </p>
               </div>
 
