@@ -33,12 +33,14 @@ interface Props {
 }
 
 export default function HomeSearch({ topMfrs, topDevices, highRiskMfrs, highRiskDevices }: Props) {
-  const [query, setQuery]     = useState('')
-  const [results, setResults] = useState<SearchResult[] | null>(null)
-  const [summary, setSummary] = useState('')
-  const [isAI, setIsAI]       = useState(false)
-  const [loading, setLoading] = useState(false)
-  const inputRef              = useRef<HTMLInputElement>(null)
+  const [query, setQuery]       = useState('')
+  const [results, setResults]   = useState<SearchResult[] | null>(null)
+  const [summary, setSummary]   = useState('')
+  const [isAI, setIsAI]         = useState(false)
+  const [loading, setLoading]   = useState(false)
+  const [refining, setRefining] = useState(false)
+  const inputRef                = useRef<HTMLInputElement>(null)
+  const searchId                = useRef(0) // cancel stale responses
 
   // Pick up ?q= from URL on first load
   useEffect(() => {
@@ -51,19 +53,40 @@ export default function HomeSearch({ topMfrs, topDevices, highRiskMfrs, highRisk
   const doSearch = useCallback(async (q: string) => {
     const trimmed = q.trim()
     if (!trimmed) { setResults(null); setSummary(''); return }
+
+    const id = ++searchId.current
     setLoading(true)
+    setRefining(false)
     setResults(null)
+    setIsAI(false)
     window.history.replaceState({}, '', `/?q=${encodeURIComponent(trimmed)}`)
+
+    const url = (suffix: string) => `/api/nl-search?q=${encodeURIComponent(trimmed)}${suffix}`
+
+    // Phase 1 — fast Firestore prefix search, no AI (~200ms)
     try {
-      const res  = await fetch(`/api/nl-search?q=${encodeURIComponent(trimmed)}`)
-      const data = await res.json()
-      setResults(data.results ?? [])
-      setSummary(data.summary ?? '')
-      setIsAI(!!data.intent)
-    } catch {
-      setResults([])
-    } finally {
+      const fast = await fetch(url('&fast=1')).then((r) => r.json())
+      if (searchId.current !== id) return // superseded
+      setResults(fast.results ?? [])
+      setSummary(fast.summary ?? '')
       setLoading(false)
+      setRefining(true)
+    } catch {
+      if (searchId.current !== id) return
+      setLoading(false)
+    }
+
+    // Phase 2 — full NL search with AI ranking (runs in parallel, updates results)
+    try {
+      const nl = await fetch(url('')).then((r) => r.json())
+      if (searchId.current !== id) return // superseded
+      setResults(nl.results ?? [])
+      setSummary(nl.summary ?? '')
+      setIsAI(!!nl.intent)
+    } catch {
+      // keep phase-1 results
+    } finally {
+      if (searchId.current === id) setRefining(false)
     }
   }, [])
 
@@ -192,6 +215,12 @@ export default function HomeSearch({ topMfrs, topDevices, highRiskMfrs, highRisk
                 {isAI && (
                   <span className="shrink-0 rounded bg-brand-600 px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">
                     AI
+                  </span>
+                )}
+                {refining && (
+                  <span className="shrink-0 flex items-center gap-1 rounded bg-gray-200 px-1.5 py-0.5 text-[10px] text-gray-500">
+                    <span className="h-2 w-2 animate-spin rounded-full border border-gray-400 border-t-transparent" />
+                    Refining…
                   </span>
                 )}
                 <p className="text-sm text-brand-800">{summary}</p>
