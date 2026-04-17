@@ -8,33 +8,7 @@ import {
   getTopDevices,
 } from '@/lib/firestore'
 import type { SearchResult } from '@/lib/types'
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Query classifier — decides whether we need LLM at all
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Phrases that imply the user wants structured filters (risk tier, death flag,
- * sort order, geography, etc.) — things a pure keyword search can't handle.
- * Keep this list tight; false-positives send simple queries through the LLM path.
- */
-const NL_TRIGGERS = [
-  'high risk', 'low risk', 'medium risk', 'high-risk',
-  'with death', 'with recall', 'with injur', 'with malfunction',
-  'recalled',
-  'sort by', 'ranked', 'most dangerous', 'worst', 'highest risk',
-  'compare', ' vs ', ' versus ',
-]
-
-/** Question-word patterns that signal free-form natural language */
-const QUESTION_RE = /^(what|which|show|find|list|how many|are there|give me)\b/i
-
-function needsLLM(query: string): boolean {
-  const q = query.toLowerCase()
-  if (NL_TRIGGERS.some((t) => q.includes(t))) return true
-  if (QUESTION_RE.test(q.trim())) return true
-  return false
-}
+import { needsLLM } from '@/lib/nlTriggers'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tokenizer
@@ -165,6 +139,7 @@ async function parseIntent(query: string): Promise<SearchIntent> {
   const res = await fetch(`${baseUrl}/v1/chat/completions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+    signal: AbortSignal.timeout(8000),
     body: JSON.stringify({
       model, max_tokens: 150, temperature: 0,
       messages: [
