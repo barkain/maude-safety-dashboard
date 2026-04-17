@@ -69,6 +69,38 @@ export async function searchManufacturers(queryStr: string): Promise<Manufacture
   return snap.docs.map((d) => snapToManufacturer(d.data(), d.id))
 }
 
+/** Fetch top manufacturers ranked by recall_risk_score descending */
+export async function getTopRiskManufacturers(n = 50): Promise<Manufacturer[]> {
+  if (USE_MOCK) {
+    return [...MOCK_MANUFACTURERS]
+      .sort((a, b) => (b.recall_risk_score ?? 0) - (a.recall_risk_score ?? 0))
+      .slice(0, n)
+  }
+  const q = query(
+    collection(getDb(), 'manufacturers'),
+    orderBy('recall_risk_score', 'desc'),
+    fsLimit(n),
+  )
+  const snap = await getDocs(q)
+  return snap.docs.map((d) => snapToManufacturer(d.data(), d.id))
+}
+
+/** Fetch top devices ranked by recall_risk_score descending */
+export async function getTopRiskDevices(n = 50): Promise<Device[]> {
+  if (USE_MOCK) {
+    return [...MOCK_DEVICES]
+      .sort((a, b) => (b.recall_risk_score ?? 0) - (a.recall_risk_score ?? 0))
+      .slice(0, n)
+  }
+  const q = query(
+    collection(getDb(), 'devices'),
+    orderBy('recall_risk_score', 'desc'),
+    fsLimit(n),
+  )
+  const snap = await getDocs(q)
+  return snap.docs.map((d) => snapToDevice(d.data(), d.id))
+}
+
 /** Fetch manufacturers with HIGH risk tier, sorted by total_events desc */
 export async function getHighRiskManufacturers(n = 6): Promise<Manufacturer[]> {
   if (USE_MOCK) return MOCK_MANUFACTURERS.filter((m) => m.risk_tier === 'HIGH').slice(0, n)
