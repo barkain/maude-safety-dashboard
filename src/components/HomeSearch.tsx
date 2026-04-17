@@ -61,32 +61,45 @@ export default function HomeSearch({ topMfrs, topDevices, highRiskMfrs, highRisk
     setIsAI(false)
     window.history.replaceState({}, '', `/?q=${encodeURIComponent(trimmed)}`)
 
-    const url = (suffix: string) => `/api/nl-search?q=${encodeURIComponent(trimmed)}${suffix}`
+    // Detect NL queries client-side (mirrors server logic) so we can show two phases
+    const isNL = /high.?risk|low.?risk|with death|with recall|recalled|sort by|compare|\bvs\b|^(what|which|show|find|list|how)/i.test(trimmed)
 
-    // Phase 1 — fast Firestore prefix search, no AI (~200ms)
-    try {
-      const fast = await fetch(url('&fast=1')).then((r) => r.json())
-      if (searchId.current !== id) return // superseded
-      setResults(fast.results ?? [])
-      setSummary(fast.summary ?? '')
-      setLoading(false)
-      setRefining(true)
-    } catch {
-      if (searchId.current !== id) return
-      setLoading(false)
-    }
-
-    // Phase 2 — full NL search with AI ranking (runs in parallel, updates results)
-    try {
-      const nl = await fetch(url('')).then((r) => r.json())
-      if (searchId.current !== id) return // superseded
-      setResults(nl.results ?? [])
-      setSummary(nl.summary ?? '')
-      setIsAI(!!nl.intent)
-    } catch {
-      // keep phase-1 results
-    } finally {
-      if (searchId.current === id) setRefining(false)
+    if (isNL) {
+      // Phase 1 — instant keyword results while AI processes
+      try {
+        const fast = await fetch(`/api/nl-search?q=${encodeURIComponent(trimmed)}&fast=1`).then((r) => r.json())
+        if (searchId.current !== id) return
+        setResults(fast.results ?? [])
+        setSummary(fast.summary ?? '')
+        setLoading(false)
+        setRefining(true)
+      } catch {
+        if (searchId.current !== id) return
+        setLoading(false)
+      }
+      // Phase 2 — AI-ranked results
+      try {
+        const nl = await fetch(`/api/nl-search?q=${encodeURIComponent(trimmed)}`).then((r) => r.json())
+        if (searchId.current !== id) return
+        setResults(nl.results ?? [])
+        setSummary(nl.summary ?? '')
+        setIsAI(!!nl.intent)
+      } catch { /* keep phase-1 */ }
+      finally { if (searchId.current === id) setRefining(false) }
+    } else {
+      // Simple keyword query — single fast request, no AI
+      try {
+        const data = await fetch(`/api/nl-search?q=${encodeURIComponent(trimmed)}`).then((r) => r.json())
+        if (searchId.current !== id) return
+        setResults(data.results ?? [])
+        setSummary(data.summary ?? '')
+        setIsAI(false)
+      } catch {
+        if (searchId.current !== id) return
+        setResults([])
+      } finally {
+        if (searchId.current === id) setLoading(false)
+      }
     }
   }, [])
 
