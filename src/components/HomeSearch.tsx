@@ -32,21 +32,49 @@ interface Props {
   highRiskDevices: SerialDevice[]
 }
 
-export default function HomeSearch({ topMfrs, topDevices, highRiskMfrs, highRiskDevices }: Props) {
-  const [query, setQuery]       = useState('')
-  const [results, setResults]   = useState<SearchResult[] | null>(null)
-  const [summary, setSummary]   = useState('')
-  const [isAI, setIsAI]         = useState(false)
-  const [loading, setLoading]   = useState(false)
-  const [refining, setRefining] = useState(false)
-  const inputRef                = useRef<HTMLInputElement>(null)
-  const searchId                = useRef(0) // cancel stale responses
+const RECENT_KEY    = 'maude_recent_searches'
+const RECENT_MAX    = 8
 
-  // Pick up ?q= from URL on first load
+function loadRecent(): string[] {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? '[]') } catch { return [] }
+}
+
+function saveRecent(q: string) {
+  const prev = loadRecent().filter((s) => s !== q)
+  localStorage.setItem(RECENT_KEY, JSON.stringify([q, ...prev].slice(0, RECENT_MAX)))
+}
+
+function removeRecent(q: string) {
+  localStorage.setItem(RECENT_KEY, JSON.stringify(loadRecent().filter((s) => s !== q)))
+}
+
+export default function HomeSearch({ topMfrs, topDevices, highRiskMfrs, highRiskDevices }: Props) {
+  const [query, setQuery]           = useState('')
+  const [results, setResults]       = useState<SearchResult[] | null>(null)
+  const [summary, setSummary]       = useState('')
+  const [isAI, setIsAI]             = useState(false)
+  const [loading, setLoading]       = useState(false)
+  const [refining, setRefining]     = useState(false)
+  const [recentSearches, setRecent] = useState<string[]>([])
+  const [showRecent, setShowRecent] = useState(false)
+  const inputRef                    = useRef<HTMLInputElement>(null)
+  const searchId                    = useRef(0)
+  const containerRef                = useRef<HTMLDivElement>(null)
+
+  // Load recent searches + pick up ?q= from URL on first load
   useEffect(() => {
+    setRecent(loadRecent())
     const params = new URLSearchParams(window.location.search)
     const q = params.get('q')
     if (q) { setQuery(q); doSearch(q) }
+    // Close recent dropdown on outside click
+    function handleClick(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setShowRecent(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -59,7 +87,10 @@ export default function HomeSearch({ topMfrs, topDevices, highRiskMfrs, highRisk
     setRefining(false)
     setResults(null)
     setIsAI(false)
+    setShowRecent(false)
     window.history.replaceState({}, '', `/?q=${encodeURIComponent(trimmed)}`)
+    saveRecent(trimmed)
+    setRecent(loadRecent())
 
     // Detect NL queries client-side (mirrors server logic) so we can show two phases
     const isNL = /high.?risk|low.?risk|with death|with recall|recalled|sort by|compare|\bvs\b|^(what|which|show|find|list|how)/i.test(trimmed)
@@ -117,8 +148,15 @@ export default function HomeSearch({ topMfrs, topDevices, highRiskMfrs, highRisk
     setQuery('')
     setResults(null)
     setSummary('')
+    setShowRecent(false)
     window.history.replaceState({}, '', '/')
     inputRef.current?.focus()
+  }
+
+  function handleRemoveRecent(e: React.MouseEvent, q: string) {
+    e.stopPropagation()
+    removeRecent(q)
+    setRecent(loadRecent())
   }
 
   const hasResults = results !== null
@@ -140,7 +178,8 @@ export default function HomeSearch({ topMfrs, topDevices, highRiskMfrs, highRisk
           </p>
 
           {/* Search form */}
-          <form onSubmit={handleSubmit} className="mt-8 mx-auto max-w-xl">
+          <div ref={containerRef} className="relative mt-8 mx-auto max-w-xl">
+          <form onSubmit={handleSubmit}>
             <div className="relative">
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
                 <svg className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="none" stroke="currentColor">
@@ -153,12 +192,14 @@ export default function HomeSearch({ topMfrs, topDevices, highRiskMfrs, highRisk
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
+                onFocus={() => { if (!query && recentSearches.length > 0) setShowRecent(true) }}
+                onKeyDown={(e) => { if (e.key === 'Escape') setShowRecent(false) }}
                 placeholder="Search devices, manufacturers, or ask in plain English…"
                 autoFocus
                 className="w-full rounded-xl border border-gray-300 bg-white py-3 pl-11 pr-28 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-200"
               />
               <div className="absolute inset-y-0 right-0 flex items-center gap-1 pr-2">
-                {hasResults && (
+                {(hasResults || query) && (
                   <button
                     type="button"
                     onClick={handleClear}
@@ -176,6 +217,44 @@ export default function HomeSearch({ topMfrs, topDevices, highRiskMfrs, highRisk
               </div>
             </div>
           </form>
+
+          {/* Recent searches dropdown */}
+          {showRecent && recentSearches.length > 0 && (
+            <ul className="absolute z-50 mt-1 w-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg text-left">
+              <li className="flex items-center justify-between px-4 py-2 border-b border-gray-100">
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Recent searches</span>
+                <button
+                  type="button"
+                  onClick={() => { localStorage.removeItem(RECENT_KEY); setRecent([]); setShowRecent(false) }}
+                  className="text-[10px] text-gray-400 hover:text-gray-600"
+                >
+                  Clear all
+                </button>
+              </li>
+              {recentSearches.map((q) => (
+                <li key={q}>
+                  <button
+                    type="button"
+                    onMouseDown={() => { setQuery(q); doSearch(q) }}
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-gray-50"
+                  >
+                    <svg className="h-3.5 w-3.5 shrink-0 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="flex-1 truncate text-sm text-gray-700">{q}</span>
+                    <span
+                      role="button"
+                      onMouseDown={(e) => handleRemoveRecent(e, q)}
+                      className="shrink-0 text-xs text-gray-300 hover:text-gray-500 cursor-pointer px-1"
+                    >
+                      ✕
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          </div>
 
           {/* Example chips */}
           <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
