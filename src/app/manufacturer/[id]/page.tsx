@@ -89,17 +89,21 @@ export default async function ManufacturerPage({ params }: Props) {
       {/* ── Severity score pill ── */}
       <div className="mt-3 flex items-center gap-2">
         <span className="text-xs text-gray-400">Severity Score:</span>
-        <span
-          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ${
-            mfr.severity_score >= 75
-              ? 'bg-red-100 text-red-700'
-              : mfr.severity_score >= 50
-              ? 'bg-orange-100 text-orange-700'
-              : 'bg-yellow-100 text-yellow-700'
-          }`}
-        >
-          {mfr.severity_score} / 100
-        </span>
+        {(() => {
+          const sev = Math.min(Math.round(mfr.severity_score), 100)
+          return (
+            <span
+              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold cursor-help ${
+                sev >= 75 ? 'bg-red-100 text-red-700'
+                : sev >= 50 ? 'bg-orange-100 text-orange-700'
+                : 'bg-yellow-100 text-yellow-700'
+              }`}
+              title="Severity score (0–100): a weighted composite of the death rate, injury rate, and recall rate across all this manufacturer's devices. Higher = more adverse outcomes relative to total events."
+            >
+              {sev} / 100
+            </span>
+          )
+        })()}
       </div>
 
       {/* ── Stats row ── */}
