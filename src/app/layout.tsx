@@ -27,6 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 </span>
               </a>
               <nav className="flex items-center gap-4 text-sm text-gray-500">
+                <a href="/risk" className="hover:text-brand-600 transition-colors font-medium text-red-600">Risk ↑</a>
                 <a href="/about" className="hover:text-brand-600 transition-colors">About</a>
                 <a
                   href="https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfmaude/search.cfm"
