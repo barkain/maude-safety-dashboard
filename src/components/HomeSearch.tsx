@@ -6,6 +6,7 @@ import ManufacturerCard from './ManufacturerCard'
 import DeviceCard from './DeviceCard'
 import StatCard from './StatCard'
 import type { Manufacturer, Device, SearchResult } from '@/lib/types'
+import { needsLLM } from '@/lib/nlTriggers'
 
 const NL_EXAMPLES = [
   'insulin pump high recall risk',
@@ -92,8 +93,8 @@ export default function HomeSearch({ topMfrs, topDevices, highRiskMfrs, highRisk
     saveRecent(trimmed)
     setRecent(loadRecent())
 
-    // Detect NL queries client-side (mirrors server logic) so we can show two phases
-    const isNL = /high.?risk|low.?risk|with death|with recall|recalled|sort by|compare|\bvs\b|^(what|which|show|find|list|how)/i.test(trimmed)
+    // Detect NL queries (shared logic with server) so we can show two phases
+    const isNL = needsLLM(trimmed)
 
     if (isNL) {
       // Phase 1 — instant keyword results while AI processes
@@ -344,11 +345,11 @@ export default function HomeSearch({ topMfrs, topDevices, highRiskMfrs, highRisk
                   {results!.length} result{results!.length !== 1 ? 's' : ''}
                 </p>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {results!.map((r, i) =>
+                  {results!.map((r) =>
                     r.kind === 'manufacturer' ? (
-                      <ManufacturerCard key={i} manufacturer={r.data as Manufacturer} />
+                      <ManufacturerCard key={r.data.id} manufacturer={r.data as Manufacturer} />
                     ) : (
-                      <DeviceCard key={i} device={r.data as Device} />
+                      <DeviceCard key={r.data.id} device={r.data as Device} />
                     )
                   )}
                 </div>
