@@ -69,15 +69,45 @@ const ROWS: RowDef[] = [
     higherIsWorse: true,
   },
   {
+    label:         'Injuries',
+    getValue:      (e) => e.injury_count,
+    format:        formatNum,
+    higherIsWorse: true,
+  },
+  {
+    label:         'Malfunctions',
+    getValue:      (e) => e.malfunction_count,
+    format:        formatNum,
+    higherIsWorse: true,
+  },
+  {
+    label:         'Recalls',
+    getValue:      (e) => e.recall_count,
+    format:        formatNum,
+    higherIsWorse: true,
+  },
+  {
     label:         'Recall Rate',
     getValue:      (e) => e.recall_rate,
     format:        pct,
     higherIsWorse: true,
   },
   {
+    label:         'Recall Risk Score',
+    getValue:      (e) => e.recall_risk_score ?? null,
+    format:        (n) => `${(n * 100).toFixed(0)}/100`,
+    higherIsWorse: true,
+  },
+  {
     label:         'Severity Score',
     getValue:      (e) => e.severity_score,
     format:        (n) => `${n}/100`,
+    higherIsWorse: true,
+  },
+  {
+    label:         'Supply Chain Risk',
+    getValue:      (e) => ('supply_chain_risk_score' in e ? (e as { supply_chain_risk_score: number }).supply_chain_risk_score : null),
+    format:        (n) => `${n.toFixed(1)}/10`,
     higherIsWorse: true,
   },
 ]
