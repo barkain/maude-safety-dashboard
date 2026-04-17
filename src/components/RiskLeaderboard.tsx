@@ -67,7 +67,7 @@ export default function RiskLeaderboard({ manufacturers, devices }: Props) {
       death_count:       m.death_count,
       recall_rate:       m.recall_rate,
       recall_count:      m.recall_count,
-      subtitle:          [m.country, ...(m.specialties?.slice(0, 2) ?? [])].filter(Boolean).join(' · '),
+      subtitle:          [m.country, ...(Array.isArray(m.specialties) ? m.specialties.slice(0, 2) : [])].filter(Boolean).join(' · '),
       href:              `/manufacturer/${encodeURIComponent(m.id)}`,
     }))
 
