@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import CompareBar from '@/components/CompareBar'
 
 export const metadata: Metadata = {
   title: {
@@ -45,6 +46,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main className="flex-1">
             {children}
           </main>
+
+          {/* ── Compare bar (floats above footer when items selected) ── */}
+          <CompareBar />
 
           {/* ── Footer ── */}
           <footer className="border-t border-gray-200 bg-white py-6 text-center text-xs text-gray-400">
