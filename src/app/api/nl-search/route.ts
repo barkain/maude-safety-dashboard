@@ -28,6 +28,10 @@ function tokenize(query: string): string[] {
     .slice(0, 6)
 }
 
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // BM25-style relevance scoring
 // ─────────────────────────────────────────────────────────────────────────────
@@ -50,7 +54,7 @@ function relevanceScore(result: SearchResult, tokens: string[]): number {
   for (const tok of tokens) {
     if (!text.includes(tok)) continue
     sc += 1.0
-    if (new RegExp(`\\b${tok}\\b`).test(text)) sc += 0.5
+    if (new RegExp(`\\b${escapeRegExp(tok)}\\b`).test(text)) sc += 0.5
     if (text.startsWith(tok)) sc += 0.3
   }
   sc -= text.length * 0.001 // slight specificity bonus for shorter names
