@@ -5,6 +5,7 @@ import type { Manufacturer, Device } from '@/lib/types'
 import CompareTable from '@/components/CompareTable'
 import MultiEntityTrendChart from '@/components/MultiEntityTrendChart'
 import { formatEventCount } from '@/lib/search'
+import RemoveFromCompare from '@/components/RemoveFromCompare'
 
 export const metadata: Metadata = {
   title: 'Compare — FDA MAUDE Dashboard',
@@ -123,10 +124,13 @@ export default async function ComparePage({ searchParams }: Props) {
           >
             {entities.map((e) => (
               <div key={e.id} className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-                {/* Name + tier */}
+                {/* Name + tier + remove */}
                 <div className="mb-2 flex items-start justify-between gap-2">
                   <p className="text-sm font-bold leading-snug text-gray-900">{getEntityName(e)}</p>
-                  <TierBadge tier={e.risk_tier} />
+                  <div className="flex flex-shrink-0 items-center gap-1.5">
+                    <TierBadge tier={e.risk_tier} />
+                    <RemoveFromCompare removeId={e.id} remainingIds={rawIds} type={type} />
+                  </div>
                 </div>
 
                 {/* Device-specific subtitle */}
