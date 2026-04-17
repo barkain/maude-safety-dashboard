@@ -42,14 +42,20 @@ function toChartData(
 
   if (trend === 'UNKNOWN' || projectMonths === 0) return historical
 
-  // Calculate slope from last 3 months of real data
-  const recent = sorted.slice(-3).map(([, v]) => v)
-  const avgRecent = recent.reduce((a, b) => a + b, 0) / recent.length
-
-  const growthRate =
-    trend === 'INCREASING' ? 0.04
-    : trend === 'DECREASING' ? -0.04
-    : 0.005  // STABLE — minimal drift
+  // Derive growth rate from actual month-over-month data (last 4 months)
+  const recent4 = sorted.slice(-4).map(([, v]) => v)
+  const empiricalRates: number[] = []
+  for (let i = 1; i < recent4.length; i++) {
+    if (recent4[i - 1] > 0) empiricalRates.push((recent4[i] - recent4[i - 1]) / recent4[i - 1])
+  }
+  const trendPrior =
+    trend === 'INCREASING' ? 0.04 : trend === 'DECREASING' ? -0.04 : 0.005
+  const empirical =
+    empiricalRates.length > 0
+      ? empiricalRates.reduce((a, b) => a + b, 0) / empiricalRates.length
+      : trendPrior
+  // Blend 60% empirical + 40% trend-label prior; cap at ±20%/month
+  const growthRate = Math.max(-0.20, Math.min(0.20, empirical * 0.6 + trendPrior * 0.4))
 
   // Last real date to start projecting from
   const lastKey = sorted[sorted.length - 1][0]
