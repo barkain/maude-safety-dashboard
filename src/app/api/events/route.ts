@@ -4,17 +4,19 @@ const FDA_BASE = 'https://api.fda.gov/device/event.json'
 const LIMIT    = 10
 
 interface FdaEvent {
-  report_number:   string
-  date_received:   string
-  event_type:      string
+  report_number:    string
+  mdr_report_key:   string   // FDA internal key — maps to mdrfoi__id in CFMAUDE URLs
+  date_received:    string
+  event_type:       string
   product_problems?: string[]
-  mdr_text?:       Array<{ text_type_code: string; text: string }>
-  patient?:        Array<{ sequence_number_outcome?: string[] }>
-  device?:         Array<{ brand_name?: string; generic_name?: string }>
+  mdr_text?:        Array<{ text_type_code: string; text: string }>
+  patient?:         Array<{ sequence_number_outcome?: string[] }>
+  device?:          Array<{ brand_name?: string; generic_name?: string }>
 }
 
 export interface MaudeEvent {
   reportNumber: string
+  mdrKey:       string   // mdr_report_key — use for accessdata.fda.gov detail URL
   date:         string
   eventType:    string
   problems:     string[]
@@ -90,6 +92,7 @@ export async function GET(req: NextRequest) {
 
       return {
         reportNumber: r.report_number ?? '',
+        mdrKey:       r.mdr_report_key ?? '',
         date:         formatDate(r.date_received ?? ''),
         eventType:    r.event_type ?? '',
         problems:     r.product_problems ?? [],

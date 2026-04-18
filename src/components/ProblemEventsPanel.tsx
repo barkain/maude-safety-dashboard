@@ -22,7 +22,11 @@ const EVENT_TYPE_CLASS: Record<string, string> = {
 
 function EventCard({ ev }: { ev: MaudeEvent }) {
   const cls = EVENT_TYPE_CLASS[ev.eventType] ?? 'bg-gray-100 text-gray-700'
-  const fdaUrl = `https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfmaude/detail.cfm?mdrfoi__id=${ev.reportNumber.replace(/[^0-9]/g, '')}`
+  // mdrKey = mdr_report_key from openFDA — the actual CFMAUDE database key
+  // report_number is the manufacturer's own ID and does NOT work as mdrfoi__id
+  const fdaUrl = ev.mdrKey
+    ? `https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfmaude/detail.cfm?mdrfoi__id=${ev.mdrKey}`
+    : `https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfmaude/search.cfm`
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
