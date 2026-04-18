@@ -30,6 +30,22 @@ function formatDate(raw: string): string {
   return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`
 }
 
+// FDA narratives are stored in ALL CAPS — convert to readable sentence case
+function toSentenceCase(text: string): string {
+  if (!text) return text
+  // Only convert if the text is predominantly uppercase
+  const upper = (text.match(/[A-Z]/g) ?? []).length
+  const lower = (text.match(/[a-z]/g) ?? []).length
+  if (lower > upper) return text // already mixed case — leave it
+
+  return text
+    .toLowerCase()
+    // Capitalize after sentence-ending punctuation
+    .replace(/(^|[.!?]\s+)([a-z])/g, (_, pre, ch) => pre + ch.toUpperCase())
+    // Re-uppercase FDA/medical acronyms that should stay caps
+    .replace(/\b(fda|mdr|b\)\(6\)|iv\b|ct\b|mri\b|ecg|ekg|cpr|icu|er\b|us\b|id\b|lot\b|sn\b|ref\b|exp\b|po\b|mg\b|ml\b|mm\b|cc\b)/gi, (m) => m.toUpperCase())
+}
+
 function buildQuery(params: URLSearchParams): string | null {
   const problem      = params.get('problem')?.trim()
   const productCode  = params.get('productCode')?.trim()
@@ -77,12 +93,14 @@ export async function GET(req: NextRequest) {
     const total: number = data.meta?.results?.total ?? 0
 
     const events: MaudeEvent[] = (data.results ?? []).map((r: FdaEvent) => {
-      const desc = (r.mdr_text ?? [])
-        .filter((t) => t.text_type_code?.toLowerCase().includes('description') || t.text_type_code?.toLowerCase().includes('event'))
-        .map((t) => t.text ?? '')
-        .filter(Boolean)
-        .join(' ')
-        .slice(0, 500)
+      const desc = toSentenceCase(
+        (r.mdr_text ?? [])
+          .filter((t) => t.text_type_code?.toLowerCase().includes('description') || t.text_type_code?.toLowerCase().includes('event'))
+          .map((t) => t.text ?? '')
+          .filter(Boolean)
+          .join(' ')
+          .slice(0, 500),
+      )
 
       const outcomes = Array.from(
         new Set(
