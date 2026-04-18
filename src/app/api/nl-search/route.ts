@@ -89,11 +89,10 @@ function dedup<T extends { id: string }>(items: T[]): T[] {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function stems(term: string): string[] {
-  const t = new Set([term])
-  if (term.endsWith('ies') && term.length > 5) t.add(term.slice(0, -3) + 'y') // arteries → artery
-  else if (term.endsWith('ves') && term.length > 5) t.add(term.slice(0, -3) + 'f') // valves → valve... actually just strip 's'
-  if (term.endsWith('s') && term.length > 4 && !term.endsWith('ss')) t.add(term.slice(0, -1)) // valves → valve, pumps → pump
-  return [...t]
+  const t: string[] = [term]
+  if (term.endsWith('ies') && term.length > 5) t.push(term.slice(0, -3) + 'y') // arteries → artery
+  if (term.endsWith('s') && term.length > 4 && !term.endsWith('ss')) t.push(term.slice(0, -1)) // valves → valve, pumps → pump
+  return t.filter((v, i, a) => a.indexOf(v) === i)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -103,7 +102,7 @@ function stems(term: string): string[] {
 async function keywordSearch(query: string): Promise<{ results: SearchResult[]; summary: string }> {
   const tokens = tokenize(query)
   const terms  = tokens.length > 0 ? tokens : [query.toLowerCase().trim()]
-  const expandedTerms = [...new Set(terms.flatMap(stems))]
+  const expandedTerms = Array.from(new Set(terms.flatMap(stems)))
 
   const [mfrResults, devResults] = await Promise.all([
     Promise.all(expandedTerms.map(searchManufacturers)).then((r) => r.flat()),
@@ -182,7 +181,7 @@ async function nlSearch(query: string): Promise<{ results: SearchResult[]; summa
   ])
 
   const keywords = intent.keywords.slice(0, 5)
-  const expandedKeywords = [...new Set(keywords.flatMap(stems))]
+  const expandedKeywords = Array.from(new Set(keywords.flatMap(stems)))
 
   // Run AI-chosen keyword searches (entity-type filtered), with stemming
   const [kwMfrs, kwDevs] = await Promise.all([
