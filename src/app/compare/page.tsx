@@ -7,6 +7,7 @@ import MultiEntityTrendChart from '@/components/MultiEntityTrendChart'
 import { formatEventCount } from '@/lib/search'
 import RemoveFromCompare from '@/components/RemoveFromCompare'
 import CsvExportButton from '@/components/CsvExportButton'
+import ClearCompareButton from '@/components/ClearCompareButton'
 
 export const metadata: Metadata = {
   title: 'Compare — FDA MAUDE Dashboard',
@@ -139,6 +140,7 @@ export default async function ComparePage({ searchParams }: Props) {
               )}
             />
           )}
+          {entities.length > 0 && <ClearCompareButton />}
           <Link href="/" className="text-sm text-brand-600 hover:underline">← Back to search</Link>
         </div>
       </div>
