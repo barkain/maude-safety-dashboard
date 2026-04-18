@@ -127,9 +127,6 @@ export default function ProblemEventsPanel({ problems, productCode, manufacturer
                 {i + 1}
               </span>
               <span className="flex-1 text-sm text-gray-700 group-hover:text-brand-800">{p.problem}</span>
-              {p.count != null && (
-                <span className="text-xs text-gray-400">{p.count} reports</span>
-              )}
               <svg className="h-3.5 w-3.5 text-gray-300 group-hover:text-brand-500 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
