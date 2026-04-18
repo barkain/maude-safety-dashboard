@@ -161,12 +161,34 @@ export default async function DevicePage({ params }: Props) {
             <TrendBadge trend={device.projected_event_rate_trend} size="sm" />
           </div>
           <p className="mt-1 text-sm text-gray-500">{device.generic_name}</p>
-          <Link
-            href={`/manufacturer/${encodeURIComponent(manufacturerId)}`}
-            className="mt-0.5 inline-block text-xs text-brand-600 hover:underline"
-          >
-            {device.manufacturer_name}
-          </Link>
+          <div className="mt-0.5 flex flex-wrap items-center gap-3">
+            <Link
+              href={`/manufacturer/${encodeURIComponent(manufacturerId)}`}
+              className="text-xs text-brand-600 hover:underline"
+            >
+              {device.manufacturer_name}
+            </Link>
+            {device.product_code && (
+              <a
+                href={`https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfPCD/classification.cfm?ID=${device.product_code}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-brand-600 hover:underline"
+              >
+                FDA Classification ↗
+              </a>
+            )}
+            {device.product_code && (
+              <a
+                href={`https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfmaude/search.cfm`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-gray-400 hover:underline"
+              >
+                Search MAUDE ↗
+              </a>
+            )}
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <RecallBadge rate={device.recall_rate} count={device.recall_count} />
