@@ -58,6 +58,7 @@ export default function HomeSearch({ topMfrs, topDevices, highRiskMfrs, highRisk
   const [refining, setRefining]     = useState(false)
   const [recentSearches, setRecent] = useState<string[]>([])
   const [showRecent, setShowRecent] = useState(false)
+  const [groupByMfr, setGroupByMfr] = useState(false)
   const inputRef                    = useRef<HTMLInputElement>(null)
   const searchId                    = useRef(0)
   const containerRef                = useRef<HTMLDivElement>(null)
@@ -379,18 +380,103 @@ export default function HomeSearch({ topMfrs, topDevices, highRiskMfrs, highRisk
               </div>
             ) : (
               <>
-                <p className="mb-4 text-xs text-gray-400">
-                  {results!.length} result{results!.length !== 1 ? 's' : ''}
-                </p>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {results!.map((r) =>
-                    r.kind === 'manufacturer' ? (
-                      <ManufacturerCard key={r.data.id} manufacturer={r.data as Manufacturer} />
-                    ) : (
-                      <DeviceCard key={r.data.id} device={r.data as Device} />
-                    )
-                  )}
+                {/* ── Result count + group toggle ── */}
+                <div className="mb-4 flex items-center gap-3">
+                  <p className="text-xs text-gray-400">
+                    {results!.length} result{results!.length !== 1 ? 's' : ''}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setGroupByMfr((v) => !v)}
+                    className={`ml-auto inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                      groupByMfr
+                        ? 'border-brand-400 bg-brand-50 text-brand-700'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                    {groupByMfr ? 'Ungrouped' : 'Group by Manufacturer'}
+                  </button>
                 </div>
+
+                {/* ── Flat view ── */}
+                {!groupByMfr && (
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {results!.map((r) =>
+                      r.kind === 'manufacturer' ? (
+                        <ManufacturerCard key={r.data.id} manufacturer={r.data as Manufacturer} />
+                      ) : (
+                        <DeviceCard key={r.data.id} device={r.data as Device} />
+                      )
+                    )}
+                  </div>
+                )}
+
+                {/* ── Grouped view ── */}
+                {groupByMfr && (() => {
+                  // Build groups: keyed by manufacturer name
+                  const groups = new Map<string, { mfr: Manufacturer | null; devices: Device[]; totalEvents: number }>()
+
+                  for (const r of results!) {
+                    if (r.kind === 'manufacturer') {
+                      const m = r.data as Manufacturer
+                      const g = groups.get(m.name) ?? { mfr: null, devices: [], totalEvents: 0 }
+                      g.mfr = m
+                      g.totalEvents = Math.max(g.totalEvents, m.total_events)
+                      groups.set(m.name, g)
+                    } else {
+                      const d  = r.data as Device
+                      const key = d.manufacturer_name || 'Unknown Manufacturer'
+                      const g  = groups.get(key) ?? { mfr: null, devices: [], totalEvents: 0 }
+                      g.devices.push(d)
+                      g.totalEvents += d.total_events
+                      groups.set(key, g)
+                    }
+                  }
+
+                  const sorted = Array.from(groups.entries()).sort(([, a], [, b]) => b.totalEvents - a.totalEvents)
+
+                  return (
+                    <div className="space-y-8">
+                      {sorted.map(([mfrName, group]) => (
+                        <div key={mfrName}>
+                          {/* Manufacturer header */}
+                          <div className="mb-3 flex items-center gap-3 border-b border-gray-200 pb-2">
+                            <Link
+                              href={group.mfr ? `/manufacturer/${encodeURIComponent(group.mfr.id)}` : '#'}
+                              className="text-sm font-bold text-gray-900 hover:text-brand-600 hover:underline"
+                            >
+                              {mfrName}
+                            </Link>
+                            {group.mfr && (
+                              <span className="text-xs text-gray-400">{group.mfr.country}</span>
+                            )}
+                            <span className="ml-auto text-xs text-gray-400">
+                              {group.devices.length} device{group.devices.length !== 1 ? 's' : ''}
+                              {group.mfr && ` · ${group.mfr.total_events.toLocaleString()} total events`}
+                            </span>
+                          </div>
+
+                          {/* Manufacturer card (if it's in results) */}
+                          {group.mfr && group.devices.length === 0 && (
+                            <ManufacturerCard manufacturer={group.mfr} />
+                          )}
+
+                          {/* Devices grid */}
+                          {group.devices.length > 0 && (
+                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                              {group.devices.map((d) => (
+                                <DeviceCard key={d.id} device={d} />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
               </>
             )}
           </section>
