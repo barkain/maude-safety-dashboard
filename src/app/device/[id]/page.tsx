@@ -320,6 +320,9 @@ export default async function DevicePage({ params }: Props) {
         <StatCard label="Malfunctions"  value={formatEventCount(device.malfunction_count)}  accent="yellow" />
         <StatCard label="Recalls"       value={device.recall_count}                         accent="red"    />
       </div>
+      <p className="mt-1.5 text-[11px] text-gray-400">
+        Stats reflect our 2024–2026 dataset sample. &quot;FDA reports&quot; counts below are all-time from the full MAUDE database.
+      </p>
 
       {/* ── Recall Risk Gauge ── */}
       <div className="mt-6">

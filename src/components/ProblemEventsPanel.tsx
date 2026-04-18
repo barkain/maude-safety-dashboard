@@ -147,7 +147,12 @@ export default function ProblemEventsPanel({ problems, productCode, manufacturer
               </span>
               <span className="flex-1 text-sm text-gray-700 group-hover:text-brand-800">{p.problem}</span>
               {liveCounts[p.problem] != null ? (
-                <span className="text-xs text-gray-400 shrink-0">{liveCounts[p.problem].toLocaleString()} reports</span>
+                <span
+                  className="text-xs text-gray-400 shrink-0 cursor-help"
+                  title="All-time count from the full FDA MAUDE database — higher than the dataset totals above, which reflect only our 2024–2026 collection window."
+                >
+                  {liveCounts[p.problem].toLocaleString()} FDA reports
+                </span>
               ) : (
                 <span className="h-3 w-12 animate-pulse rounded bg-gray-100 shrink-0" />
               )}

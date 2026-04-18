@@ -131,6 +131,9 @@ export default async function ManufacturerPage({ params }: Props) {
         <StatCard label="Malfunctions"  value={formatEventCount(mfr.malfunction_count)}  accent="yellow" />
         <StatCard label="Recalls"       value={mfr.recall_count}                         accent="red"    />
       </div>
+      <p className="mt-1.5 text-[11px] text-gray-400">
+        Stats reflect our 2024–2026 dataset sample. &quot;FDA reports&quot; counts on problem rows are all-time from the full MAUDE database.
+      </p>
 
       {/* ── Supply Chain Risk section ── */}
       <section className="mt-6 rounded-xl border border-gray-200 bg-gray-50 p-5">
