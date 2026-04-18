@@ -162,6 +162,44 @@ export default function HomeSearch({ topMfrs, topDevices, highRiskMfrs, highRisk
 
   const hasResults = results !== null
 
+  // ── Derive stat card values from results when search is active ─────────────
+  const statCards = (() => {
+    if (!hasResults || results!.length === 0) {
+      return HEADLINE_STATS.map((s) => ({ ...s }))
+    }
+    const r = results!
+
+    // Total events across all results
+    const totalEvents = r.reduce((sum, x) => sum + (x.data.total_events ?? 0), 0)
+
+    // Unique manufacturers: for mfr results count them; for device results count unique manufacturer_name
+    const mfrIds = new Set<string>()
+    r.forEach((x) => {
+      if (x.kind === 'manufacturer') mfrIds.add(x.data.id)
+      else mfrIds.add((x.data as { manufacturer_name: string }).manufacturer_name)
+    })
+    const mfrCount = mfrIds.size
+
+    // Device count (device-kind results only) or total result count if no devices
+    const deviceCount = r.filter((x) => x.kind === 'device').length
+
+    // High risk count
+    const highRiskCount = r.filter((x) => x.data.risk_tier === 'HIGH').length
+
+    function fmt(n: number): string {
+      if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+      if (n >= 1_000) return `${(n / 1_000).toFixed(n >= 10_000 ? 0 : 1)}K`
+      return String(n)
+    }
+
+    return [
+      { label: 'Events in Results',    value: fmt(totalEvents),    sub: 'Combined adverse event reports', accent: 'blue'    },
+      { label: 'Manufacturers',         value: String(mfrCount),    sub: 'In this result set',             accent: 'green'   },
+      { label: 'Devices',               value: String(deviceCount), sub: 'Device types matched',           accent: 'default' },
+      { label: 'High Risk',             value: String(highRiskCount), sub: 'Flagged for procurement review', accent: 'orange' },
+    ] as const
+  })()
+
   return (
     <>
       {/* ── Hero ── */}
@@ -275,10 +313,10 @@ export default function HomeSearch({ topMfrs, topDevices, highRiskMfrs, highRisk
       </section>
 
       <div className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
-        {/* ── Headline stats — always visible ── */}
+        {/* ── Headline stats — reflect results when search is active ── */}
         <section className="-mt-8">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {HEADLINE_STATS.map((s) => (
+            {statCards.map((s) => (
               <StatCard
                 key={s.label}
                 label={s.label}
