@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { getManufacturer } from '@/lib/firestore'
+import { getManufacturer, getDevice } from '@/lib/firestore'
 import { formatEventCount } from '@/lib/search'
 import StatCard from '@/components/StatCard'
 import RecallBadge from '@/components/RecallBadge'
@@ -35,41 +35,51 @@ export default async function ManufacturerPage({ params }: Props) {
   const mfr = await getManufacturer(decodeURIComponent(params.id))
   if (!mfr) notFound()
 
-  // Synthesise Device stubs from top_devices for the cards
-  const deviceStubs: Device[] = mfr.top_devices.map((td) => {
-    // top_devices may be {id, name, count} or {key, count} depending on aggregation version
-    const rawKey     = (td as {id?: string; key?: string; name?: string; count: number}).id ?? (td as {key?: string}).key ?? ''
-    // Device Firestore IDs have the format "mfr_id:product_code" — stitch it together if needed
-    const deviceId   = rawKey.includes(':') ? rawKey : `${mfr.id}:${rawKey}`
-    const deviceName = (td as {name?: string; key?: string}).name ?? (td as {key?: string}).key ?? ''
-    return ({
-    id:                           deviceId,
-    manufacturer_id:              mfr.id,
-    manufacturer_name:            mfr.name,
-    brand_name:                   deviceName,
-    generic_name:                 '',
-    product_code:                 '',
-    device_class:                 'Class II',
-    medical_specialty:            '',
-    total_events:                 td.count,
-    death_count:                  0,
-    injury_count:                 0,
-    malfunction_count:            td.count,
-    recall_count:                 0,
-    recall_rate:                  mfr.recall_rate,
-    severity_score:               mfr.severity_score,
-    events_by_month:              {},
-    top_problems:                 [],
-    last_updated:                 null,
-    recall_risk_score:            mfr.recall_risk_score,
-    risk_tier:                    mfr.risk_tier,
-    projected_event_rate_trend:   mfr.projected_event_rate_trend,
-  })
-  })
+  // Load actual device records from Firestore (parallel); fall back to stubs for any missing
+  const deviceStubs: Device[] = await Promise.all(
+    mfr.top_devices.map(async (td) => {
+      const rawKey     = (td as {id?: string; key?: string; name?: string; count: number}).id ?? (td as {key?: string}).key ?? ''
+      const deviceId   = rawKey.includes(':') ? rawKey : `${mfr.id}:${rawKey}`
+      const deviceName = (td as {name?: string; key?: string}).name ?? (td as {key?: string}).key ?? ''
 
-  const deviceClassEntries = Object.entries(mfr.device_classes).sort(
-    ([, a], [, b]) => b - a,
+      // Try to load the real device document — it has accurate death/injury counts
+      const real = await getDevice(deviceId).catch(() => null)
+      if (real) return real
+
+      // Stub fallback (only event count available)
+      return {
+        id:                          deviceId,
+        manufacturer_id:             mfr.id,
+        manufacturer_name:           mfr.name,
+        brand_name:                  deviceName,
+        generic_name:                '',
+        product_code:                '',
+        device_class:                'Class II',
+        medical_specialty:           '',
+        total_events:                td.count,
+        death_count:                 0,
+        injury_count:                0,
+        malfunction_count:           td.count,
+        recall_count:                0,
+        recall_rate:                 mfr.recall_rate,
+        severity_score:              mfr.severity_score,
+        events_by_month:             {},
+        top_problems:                [],
+        last_updated:                null,
+        recall_risk_score:           mfr.recall_risk_score,
+        risk_tier:                   mfr.risk_tier,
+        projected_event_rate_trend:  mfr.projected_event_rate_trend,
+      } satisfies Device
+    }),
   )
+
+  const CLASS_LABELS: Record<string, string> = {
+    '1': 'Class I', '2': 'Class II', '3': 'Class III',
+    'f': 'Class II (Exempt)', 'u': 'Unclassified', 'n': 'Not Classified',
+  }
+  const deviceClassEntries = Object.entries(mfr.device_classes)
+    .sort(([, a], [, b]) => b - a)
+    .map(([cls, count]) => [CLASS_LABELS[cls.toLowerCase()] ?? `Class ${cls}`, count] as [string, number])
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
