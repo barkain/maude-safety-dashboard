@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Missing required params: problem + (productCode|manufacturerName)' }, { status: 400 })
   }
 
-  const url = `${FDA_BASE}?search=${query}&limit=${countOnly ? 1 : LIMIT}&skip=${skip}`
+  const url = `${FDA_BASE}?search=${query}&sort=date_received:desc&limit=${countOnly ? 1 : LIMIT}&skip=${skip}`
 
   try {
     const res = await fetch(url, {
