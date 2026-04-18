@@ -45,7 +45,10 @@ function filterByTimeframe(
   if (sorted.length === 0) return {}
   const lastKey  = sorted[sorted.length - 1]
   const lastDate = parse(lastKey, 'yyyy-MM', new Date())
-  const cutoff   = format(subMonths(lastDate, timeframe - 1), 'yyyy-MM')
+  // Use `timeframe` months back (not timeframe-1) so "1M" shows the last real
+  // month of data + context. Enforce minimum 2 months so a line can render.
+  const months  = Math.max(timeframe, 2)
+  const cutoff  = format(subMonths(lastDate, months - 1), 'yyyy-MM')
   return Object.fromEntries(Object.entries(eventsByMonth).filter(([k]) => k >= cutoff))
 }
 
@@ -100,15 +103,21 @@ export default function EventTrendChart({
 }: EventTrendChartProps) {
   const [timeframe, setTimeframe] = useState<Timeframe>(12)
 
-  const filtered     = filterByTimeframe(eventsByMonth, timeframe)
-  const data         = toChartData(filtered, trend, projectMonths)
+  const filtered      = filterByTimeframe(eventsByMonth, timeframe)
+  const data          = toChartData(filtered, trend, projectMonths)
   const hasProjection = trend !== 'UNKNOWN' && projectMonths > 0
-  const splitMonth   = data.findLast?.((d) => d.events !== undefined)?.month
+  const splitMonth    = data.findLast?.((d) => d.events !== undefined)?.month
+  const actualPoints  = data.filter((d) => d.events !== undefined).length
+  const showDots      = actualPoints <= 3  // show dots when line is too short to read
+
+  const timeframeLabel = timeframe === 'all' ? 'All Time'
+    : timeframe === 1 ? 'Last Month'
+    : `Last ${timeframe} Months`
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-gray-700">{title}</h3>
+        <h3 className="text-sm font-semibold text-gray-700">{title} <span className="font-normal text-gray-400">· {timeframeLabel}</span></h3>
         <div className="flex items-center gap-2">
           {/* Timeframe selector */}
           <div className="flex rounded-lg border border-gray-200 bg-gray-50 p-0.5 gap-0.5">
@@ -183,7 +192,7 @@ export default function EventTrendChart({
             dataKey="events"
             stroke="#3b82f6"
             strokeWidth={2}
-            dot={false}
+            dot={showDots ? { r: 4, fill: '#3b82f6' } : false}
             activeDot={{ r: 4 }}
             connectNulls={false}
           />
