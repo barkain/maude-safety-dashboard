@@ -67,15 +67,16 @@ function buildQuery(params: URLSearchParams): string | null {
 }
 
 export async function GET(req: NextRequest) {
-  const p     = req.nextUrl.searchParams
-  const skip  = parseInt(p.get('skip') ?? '0', 10)
-  const query = buildQuery(p)
+  const p          = req.nextUrl.searchParams
+  const skip       = parseInt(p.get('skip') ?? '0', 10)
+  const countOnly  = p.get('countOnly') === '1'
+  const query      = buildQuery(p)
 
   if (!query) {
     return NextResponse.json({ error: 'Missing required params: problem + (productCode|manufacturerName)' }, { status: 400 })
   }
 
-  const url = `${FDA_BASE}?search=${query}&limit=${LIMIT}&skip=${skip}`
+  const url = `${FDA_BASE}?search=${query}&limit=${countOnly ? 1 : LIMIT}&skip=${skip}`
 
   try {
     const res = await fetch(url, {
@@ -91,6 +92,8 @@ export async function GET(req: NextRequest) {
 
     const data = await res.json()
     const total: number = data.meta?.results?.total ?? 0
+
+    if (countOnly) return NextResponse.json({ total })
 
     const events: MaudeEvent[] = (data.results ?? []).map((r: FdaEvent) => {
       const desc = toSentenceCase(

@@ -54,12 +54,31 @@ function EventCard({ ev }: { ev: MaudeEvent }) {
 }
 
 export default function ProblemEventsPanel({ problems, productCode, manufacturerName }: Props) {
-  const [selected,  setSelected]  = useState<string | null>(null)
-  const [events,    setEvents]    = useState<MaudeEvent[]>([])
-  const [total,     setTotal]     = useState(0)
-  const [skip,      setSkip]      = useState(0)
-  const [loading,   setLoading]   = useState(false)
-  const [error,     setError]     = useState('')
+  const [selected,    setSelected]    = useState<string | null>(null)
+  const [events,      setEvents]      = useState<MaudeEvent[]>([])
+  const [total,       setTotal]       = useState(0)
+  const [skip,        setSkip]        = useState(0)
+  const [loading,     setLoading]     = useState(false)
+  const [error,       setError]       = useState('')
+  const [liveCounts,  setLiveCounts]  = useState<Record<string, number>>({})
+
+  // Prefetch live report counts for all problems so rows show real totals
+  useEffect(() => {
+    if (!productCode && !manufacturerName) return
+    problems.forEach(async (prob) => {
+      const p = new URLSearchParams({ problem: prob.problem, skip: '0', countOnly: '1' })
+      if (productCode)      p.set('productCode', productCode)
+      if (manufacturerName) p.set('manufacturerName', manufacturerName)
+      try {
+        const res  = await fetch(`/api/events?${p}`)
+        const data = await res.json()
+        if (res.ok && typeof data.total === 'number') {
+          setLiveCounts((prev) => ({ ...prev, [prob.problem]: data.total }))
+        }
+      } catch { /* silently ignore — count badge is non-critical */ }
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productCode, manufacturerName])
 
   const fetchEvents = useCallback(async (problem: string, nextSkip: number) => {
     setLoading(true)
@@ -127,6 +146,11 @@ export default function ProblemEventsPanel({ problems, productCode, manufacturer
                 {i + 1}
               </span>
               <span className="flex-1 text-sm text-gray-700 group-hover:text-brand-800">{p.problem}</span>
+              {liveCounts[p.problem] != null ? (
+                <span className="text-xs text-gray-400 shrink-0">{liveCounts[p.problem].toLocaleString()} reports</span>
+              ) : (
+                <span className="h-3 w-12 animate-pulse rounded bg-gray-100 shrink-0" />
+              )}
               <svg className="h-3.5 w-3.5 text-gray-300 group-hover:text-brand-500 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
