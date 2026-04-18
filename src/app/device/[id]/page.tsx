@@ -27,6 +27,83 @@ const classColors: Record<string, string> = {
   'Class III': 'bg-red-100 text-red-700 ring-red-300',
 }
 
+const classDescriptions: Record<string, string> = {
+  'Class I':   'General controls only. Lowest risk — typically exempt from premarket review.',
+  'Class II':  'General & special controls. Moderate risk — usually cleared via 510(k).',
+  'Class III': 'Strictest regulation. Highest risk — requires Premarket Approval (PMA).',
+}
+
+const submissionTypes: Record<string, string> = {
+  '1': '510(k) Premarket Notification',
+  '2': 'Premarket Approval (PMA)',
+  '3': 'Product Development Protocol',
+  '4': 'Exempt',
+  '5': '510(k) — Abbreviated',
+  '6': 'Transitional',
+  '7': 'De Novo Classification',
+}
+
+interface FdaClassification {
+  device_name: string
+  definition: string
+  medical_specialty_description: string
+  regulation_number: string
+  submission_type_id: string
+  device_class: string
+  life_sustain_support_flag: string
+  gmp_exempt_flag: string
+}
+
+async function fetchFdaClassification(productCode: string): Promise<FdaClassification | null> {
+  if (!productCode) return null
+  try {
+    const res = await fetch(
+      `https://api.fda.gov/device/classification.json?search=product_code:${productCode}&limit=1`,
+      { next: { revalidate: 86400 }, signal: AbortSignal.timeout(8000) } // cache 24h
+    )
+    if (!res.ok) return null
+    const data = await res.json()
+    return data?.results?.[0] ?? null
+  } catch {
+    return null
+  }
+}
+
+async function generateDeviceDescription(brandName: string, genericName: string): Promise<string | null> {
+  const apiKey = process.env.OPENAI_API_KEY
+  const baseUrl = process.env.OPENAI_BASE_URL ?? 'https://api.openai.com'
+  const model = process.env.OPENAI_MODEL ?? 'gpt-4o-mini'
+  if (!apiKey) return null
+  try {
+    const res = await fetch(`${baseUrl}/v1/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model,
+        max_tokens: 120,
+        temperature: 0,
+        messages: [
+          {
+            role: 'system',
+            content:
+              'You write brief, clear product descriptions for medical devices aimed at hospital procurement staff and importers — not clinicians. Be factual and plain-spoken. No marketing language.',
+          },
+          {
+            role: 'user',
+            content: `In 2 sentences, describe what this medical device is and what it is used for.\nBrand name: ${brandName}\nFDA generic name: ${genericName}\n\nReply with only the 2-sentence description, nothing else.`,
+          },
+        ],
+      }),
+      next: { revalidate: 86400 },
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    return data?.choices?.[0]?.message?.content?.trim() ?? null
+  } catch {
+    return null
+  }
+}
+
 export default async function DevicePage({ params }: Props) {
   const device = await getDevice(decodeURIComponent(params.id))
   if (!device) notFound()
@@ -35,6 +112,24 @@ export default async function DevicePage({ params }: Props) {
   const manufacturerId = device.manufacturer_id ?? (device.id.includes(':') ? device.id.split(':')[0] : device.id)
 
   const cls = classColors[device.device_class] ?? 'bg-gray-100 text-gray-700 ring-gray-300'
+
+  // Fetch FDA classification + AI description in parallel
+  const [fdaClass, aiDescription] = await Promise.all([
+    fetchFdaClassification(device.product_code),
+    generateDeviceDescription(device.brand_name, device.generic_name),
+  ])
+
+  const regulationUrl = fdaClass?.regulation_number
+    ? `https://www.ecfr.gov/current/title-21/part-${fdaClass.regulation_number.split('.')[0]}/section-${fdaClass.regulation_number}`
+    : null
+
+  const submissionLabel = fdaClass?.submission_type_id
+    ? (submissionTypes[fdaClass.submission_type_id] ?? `Type ${fdaClass.submission_type_id}`)
+    : null
+
+  const fdaDeviceClass = fdaClass?.device_class
+    ? `Class ${fdaClass.device_class === '1' ? 'I' : fdaClass.device_class === '2' ? 'II' : fdaClass.device_class === '3' ? 'III' : fdaClass.device_class}`
+    : null
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
@@ -85,17 +180,107 @@ export default async function DevicePage({ params }: Props) {
         {device.medical_specialty && (
           <span>Specialty: <span className="font-medium text-gray-600">{device.medical_specialty}</span></span>
         )}
-        {/* Severity score pill */}
-        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ring-inset ${
-          device.severity_score >= 75
+        {(() => {
+          const sev = Math.min(Math.round(device.severity_score), 100)
+          const cls = sev >= 75
             ? 'bg-red-100 text-red-700 ring-red-300'
-            : device.severity_score >= 50
+            : sev >= 50
             ? 'bg-orange-100 text-orange-700 ring-orange-300'
             : 'bg-yellow-100 text-yellow-700 ring-yellow-300'
-        }`}>
-          Severity {device.severity_score}/100
-        </span>
+          return (
+            <span
+              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ring-inset cursor-help ${cls}`}
+              title="Severity score (0–100): a weighted composite of the death rate, injury rate, and recall rate for this device. Higher = more adverse outcomes relative to total events."
+            >
+              Severity {sev}/100
+            </span>
+          )
+        })()}
       </div>
+
+      {/* ── About this device ── */}
+      {(aiDescription || fdaClass) && (
+        <section className="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-3 text-base font-semibold text-gray-800">About This Device</h2>
+
+          {aiDescription && (
+            <div className="mb-4">
+              <p className="text-sm leading-relaxed text-gray-600">{aiDescription}</p>
+              <p className="mt-1 text-[10px] text-gray-400">AI-generated summary — verify against manufacturer documentation.</p>
+            </div>
+          )}
+
+          {fdaClass && (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {/* Official FDA name */}
+              {fdaClass.device_name && (
+                <div className="rounded-lg bg-gray-50 px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">FDA Official Name</p>
+                  <p className="mt-0.5 text-sm font-medium text-gray-800">{fdaClass.device_name}</p>
+                </div>
+              )}
+
+              {/* Device class */}
+              {fdaDeviceClass && (
+                <div className="rounded-lg bg-gray-50 px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Regulatory Class</p>
+                  <p className="mt-0.5 text-sm font-medium text-gray-800">{fdaDeviceClass}</p>
+                  {classDescriptions[fdaDeviceClass] && (
+                    <p className="mt-0.5 text-[11px] text-gray-500">{classDescriptions[fdaDeviceClass]}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Submission pathway */}
+              {submissionLabel && (
+                <div className="rounded-lg bg-gray-50 px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Clearance Pathway</p>
+                  <p className="mt-0.5 text-sm font-medium text-gray-800">{submissionLabel}</p>
+                </div>
+              )}
+
+              {/* CFR regulation */}
+              {fdaClass.regulation_number && (
+                <div className="rounded-lg bg-gray-50 px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">CFR Regulation</p>
+                  {regulationUrl ? (
+                    <a
+                      href={regulationUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-0.5 block text-sm font-medium text-brand-600 hover:underline"
+                    >
+                      21 CFR {fdaClass.regulation_number} ↗
+                    </a>
+                  ) : (
+                    <p className="mt-0.5 text-sm font-medium text-gray-800">21 CFR {fdaClass.regulation_number}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Life-sustaining */}
+              <div className="rounded-lg bg-gray-50 px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Life-Sustaining</p>
+                <p className={`mt-0.5 text-sm font-semibold ${
+                  fdaClass.life_sustain_support_flag === 'Y' ? 'text-red-600' : 'text-gray-600'
+                }`}>
+                  {fdaClass.life_sustain_support_flag === 'Y' ? 'Yes'
+                    : fdaClass.life_sustain_support_flag === 'N' ? 'No'
+                    : '—'}
+                </p>
+              </div>
+
+              {/* GMP */}
+              <div className="rounded-lg bg-gray-50 px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">GMP Exempt</p>
+                <p className="mt-0.5 text-sm font-medium text-gray-600">
+                  {fdaClass.gmp_exempt_flag === 'Y' ? 'Yes' : 'No'}
+                </p>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* ── Stats row ── */}
       <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
