@@ -205,29 +205,6 @@ async function nlSearch(query: string): Promise<{ results: SearchResult[]; summa
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// In-memory result cache
-// ─────────────────────────────────────────────────────────────────────────────
-
-const CACHE_TTL = 5 * 60 * 1000
-const cache = new Map<string, { data: object; ts: number }>()
-
-function getCached(key: string): object | null {
-  const entry = cache.get(key)
-  if (!entry) return null
-  if (Date.now() - entry.ts > CACHE_TTL) { cache.delete(key); return null }
-  return entry.data
-}
-
-function setCached(key: string, data: object) {
-  if (cache.size >= 200) {
-    let oldest = '', oldestTs = Infinity
-    cache.forEach((v, k) => { if (v.ts < oldestTs) { oldestTs = v.ts; oldest = k } })
-    if (oldest) cache.delete(oldest)
-  }
-  cache.set(key, { data, ts: Date.now() })
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Route handler
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -236,25 +213,16 @@ export async function GET(req: NextRequest) {
   const fast  = req.nextUrl.searchParams.get('fast') === '1'
   if (!query) return NextResponse.json({ results: [], summary: '' })
 
-  const cacheKey = `${fast ? 'fast' : needsLLM(query) ? 'nl' : 'kw'}:${query.toLowerCase()}`
-  const cached   = getCached(cacheKey)
-  if (cached) return NextResponse.json(cached)
-
   // Fast mode or simple keyword query — no LLM
   if (fast || !process.env.OPENAI_API_KEY || !needsLLM(query)) {
-    const payload = await keywordSearch(query)
-    setCached(cacheKey, payload)
-    return NextResponse.json(payload)
+    return NextResponse.json(await keywordSearch(query))
   }
 
   // NL mode — LLM intent parsing
   try {
-    const payload = await nlSearch(query)
-    setCached(cacheKey, payload)
-    return NextResponse.json(payload)
+    return NextResponse.json(await nlSearch(query))
   } catch (err) {
     console.error('NL search error:', err)
-    const payload = await keywordSearch(query)
-    return NextResponse.json(payload)
+    return NextResponse.json(await keywordSearch(query))
   }
 }
