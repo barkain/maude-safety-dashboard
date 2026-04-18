@@ -84,6 +84,39 @@ function dedup<T extends { id: string }>(items: T[]): T[] {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Category synonym map — medical category words that don't appear in MAUDE
+// device names but should expand to terms that do
+// ─────────────────────────────────────────────────────────────────────────────
+
+const CATEGORY_SYNONYMS: Record<string, string[]> = {
+  respiratory:   ['ventilator', 'respirator', 'cpap', 'bipap', 'nebulizer', 'airway', 'tracheostomy'],
+  cardiac:       ['pacemaker', 'defibrillator', 'stent', 'catheter', 'icd', 'ablation', 'cardioverter'],
+  cardiology:    ['pacemaker', 'defibrillator', 'stent', 'catheter', 'icd', 'ablation'],
+  diabetes:      ['insulin', 'glucose', 'cgm', 'glucometer', 'infusion'],
+  diabetic:      ['insulin', 'glucose', 'cgm', 'glucometer', 'infusion'],
+  orthopedic:    ['implant', 'hip', 'knee', 'spine', 'fixation', 'prosthesis', 'fracture'],
+  orthopedics:   ['implant', 'hip', 'knee', 'spine', 'fixation', 'prosthesis'],
+  neurological:  ['neurostimulator', 'spinal', 'deep brain', 'nerve'],
+  ophthalmic:    ['intraocular', 'contact lens', 'laser', 'retinal'],
+  ophthalmology: ['intraocular', 'contact lens', 'laser', 'retinal'],
+  vascular:      ['stent', 'graft', 'catheter', 'angioplasty', 'endovascular'],
+  wound:         ['dressing', 'bandage', 'suture', 'staple', 'closure'],
+  imaging:       ['mri', 'ct', 'ultrasound', 'xray', 'scanner'],
+  infusion:      ['pump', 'catheter', 'iv', 'syringe', 'intravenous'],
+  surgical:      ['stapler', 'trocar', 'retractor', 'cautery', 'laparoscopic'],
+  dental:        ['implant', 'drill', 'crown', 'orthodontic', 'endosseous'],
+}
+
+function expandWithSynonyms(terms: string[]): string[] {
+  const extra: string[] = []
+  for (const term of terms) {
+    const syns = CATEGORY_SYNONYMS[term.toLowerCase()]
+    if (syns) extra.push(...syns)
+  }
+  return extra.length > 0 ? [...terms, ...extra] : terms
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Stemming helpers — MAUDE uses singular inverted names ("VALVE, HEART")
 // so "valves" would find nothing without de-pluralization
 // ─────────────────────────────────────────────────────────────────────────────
@@ -102,7 +135,7 @@ function stems(term: string): string[] {
 async function keywordSearch(query: string): Promise<{ results: SearchResult[]; summary: string }> {
   const tokens = tokenize(query)
   const terms  = tokens.length > 0 ? tokens : [query.toLowerCase().trim()]
-  const expandedTerms = Array.from(new Set(terms.flatMap(stems)))
+  const expandedTerms = Array.from(new Set(expandWithSynonyms(terms).flatMap(stems)))
 
   const [mfrResults, devResults] = await Promise.all([
     Promise.all(expandedTerms.map(searchManufacturers)).then((r) => r.flat()),
@@ -237,11 +270,19 @@ export async function GET(req: NextRequest) {
   if (!query) return NextResponse.json({ results: [], summary: '' })
 
   // Fast mode or simple keyword query — no LLM
-  if (fast || !process.env.OPENAI_API_KEY || !needsLLM(query)) {
-    return NextResponse.json(await keywordSearch(query))
+  if (fast || !needsLLM(query)) {
+    const kwResult = await keywordSearch(query)
+    // Zero results + OpenAI available → escalate to NL to get semantic expansion
+    if (kwResult.results.length === 0 && process.env.OPENAI_API_KEY) {
+      try { return NextResponse.json(await nlSearch(query)) } catch { /* fall through */ }
+    }
+    return NextResponse.json(kwResult)
   }
 
   // NL mode — LLM intent parsing
+  if (!process.env.OPENAI_API_KEY) {
+    return NextResponse.json(await keywordSearch(query))
+  }
   try {
     return NextResponse.json(await nlSearch(query))
   } catch (err) {
