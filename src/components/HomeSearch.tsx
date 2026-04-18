@@ -165,9 +165,10 @@ export default function HomeSearch({ topMfrs, topDevices, highRiskMfrs, highRisk
 
   // ── Derive stat card values from results when search is active ─────────────
   const statCards = (() => {
-    if (!hasResults || results!.length === 0) {
-      return HEADLINE_STATS.map((s) => ({ ...s }))
-    }
+    // No search yet — show global numbers
+    if (!hasResults) return HEADLINE_STATS.map((s) => ({ ...s }))
+
+    // Search active (even with 0 results) — show result-scoped numbers
     const r = results!
 
     // Total events across all results

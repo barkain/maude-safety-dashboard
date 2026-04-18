@@ -84,16 +84,30 @@ function dedup<T extends { id: string }>(items: T[]): T[] {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Stemming helpers — MAUDE uses singular inverted names ("VALVE, HEART")
+// so "valves" would find nothing without de-pluralization
+// ─────────────────────────────────────────────────────────────────────────────
+
+function stems(term: string): string[] {
+  const t = new Set([term])
+  if (term.endsWith('ies') && term.length > 5) t.add(term.slice(0, -3) + 'y') // arteries → artery
+  else if (term.endsWith('ves') && term.length > 5) t.add(term.slice(0, -3) + 'f') // valves → valve... actually just strip 's'
+  if (term.endsWith('s') && term.length > 4 && !term.endsWith('ss')) t.add(term.slice(0, -1)) // valves → valve, pumps → pump
+  return [...t]
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Keyword search (no LLM)
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function keywordSearch(query: string): Promise<{ results: SearchResult[]; summary: string }> {
   const tokens = tokenize(query)
   const terms  = tokens.length > 0 ? tokens : [query.toLowerCase().trim()]
+  const expandedTerms = [...new Set(terms.flatMap(stems))]
 
   const [mfrResults, devResults] = await Promise.all([
-    Promise.all(terms.map(searchManufacturers)).then((r) => r.flat()),
-    Promise.all(terms.map(searchDevices)).then((r) => r.flat()),
+    Promise.all(expandedTerms.map(searchManufacturers)).then((r) => r.flat()),
+    Promise.all(expandedTerms.map(searchDevices)).then((r) => r.flat()),
   ])
 
   const results = sortByRelevance(
@@ -168,14 +182,15 @@ async function nlSearch(query: string): Promise<{ results: SearchResult[]; summa
   ])
 
   const keywords = intent.keywords.slice(0, 5)
+  const expandedKeywords = [...new Set(keywords.flatMap(stems))]
 
-  // Run AI-chosen keyword searches (entity-type filtered)
+  // Run AI-chosen keyword searches (entity-type filtered), with stemming
   const [kwMfrs, kwDevs] = await Promise.all([
     intent.entity_type !== 'device'
-      ? Promise.all(keywords.map(searchManufacturers)).then((r) => r.flat())
+      ? Promise.all(expandedKeywords.map(searchManufacturers)).then((r) => r.flat())
       : Promise.resolve([]),
     intent.entity_type !== 'manufacturer'
-      ? Promise.all(keywords.map(searchDevices)).then((r) => r.flat())
+      ? Promise.all(expandedKeywords.map(searchDevices)).then((r) => r.flat())
       : Promise.resolve([]),
   ])
 
