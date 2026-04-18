@@ -11,6 +11,7 @@ import DeviceCard from '@/components/DeviceCard'
 import RiskScoreGauge from '@/components/RiskScoreGauge'
 import TrendBadge from '@/components/TrendBadge'
 import CompareSelector from '@/components/CompareSelector'
+import CsvExportButton from '@/components/CsvExportButton'
 import type { Device } from '@/lib/types'
 
 interface Props {
@@ -83,6 +84,12 @@ export default async function ManufacturerPage({ params }: Props) {
         <div className="flex flex-wrap items-center gap-2">
           <RecallBadge rate={mfr.recall_rate} count={mfr.recall_count} />
           <CompareSelector id={mfr.id} name={mfr.name} type="manufacturer" />
+          <CsvExportButton
+            filename={`maude-${mfr.id}-${new Date().toISOString().slice(0,10)}`}
+            headers={['Month', 'Events']}
+            rows={Object.entries(mfr.events_by_month).sort(([a],[b])=>a.localeCompare(b)).map(([month, count]) => [month, count])}
+            label="Export"
+          />
         </div>
       </div>
 

@@ -6,6 +6,7 @@ import CompareTable from '@/components/CompareTable'
 import MultiEntityTrendChart from '@/components/MultiEntityTrendChart'
 import { formatEventCount } from '@/lib/search'
 import RemoveFromCompare from '@/components/RemoveFromCompare'
+import CsvExportButton from '@/components/CsvExportButton'
 
 export const metadata: Metadata = {
   title: 'Compare — FDA MAUDE Dashboard',
@@ -93,7 +94,53 @@ export default async function ComparePage({ searchParams }: Props) {
             Side-by-side safety metrics — worst value highlighted red, best highlighted green
           </p>
         </div>
-        <Link href="/" className="text-sm text-brand-600 hover:underline">← Back to search</Link>
+        <div className="flex items-center gap-3">
+          {entities.length > 0 && (
+            <CsvExportButton
+              filename={`maude-compare-${type}s-${new Date().toISOString().slice(0,10)}`}
+              headers={
+                type === 'device'
+                  ? ['Name', 'Manufacturer', 'Generic Name', 'Product Code', 'Risk Tier', 'Total Events', 'Deaths', 'Injuries', 'Malfunctions', 'Recalls', 'Recall Rate %', 'Severity Score', 'Recall Risk Score', 'Event Trend']
+                  : ['Name', 'Country', 'Risk Tier', 'Total Events', 'Deaths', 'Injuries', 'Malfunctions', 'Recalls', 'Recall Rate %', 'Severity Score', 'Supply Chain Risk', 'Recall Risk Score', 'Event Trend']
+              }
+              rows={entities.map((e) =>
+                type === 'device'
+                  ? [
+                      (e as Device).brand_name,
+                      (e as Device).manufacturer_name,
+                      (e as Device).generic_name,
+                      (e as Device).product_code,
+                      e.risk_tier,
+                      e.total_events,
+                      e.death_count,
+                      e.injury_count,
+                      e.malfunction_count,
+                      e.recall_count,
+                      (e.recall_rate * 100).toFixed(1),
+                      e.severity_score,
+                      e.recall_risk_score,
+                      e.projected_event_rate_trend,
+                    ]
+                  : [
+                      (e as Manufacturer).name,
+                      (e as Manufacturer).country,
+                      e.risk_tier,
+                      e.total_events,
+                      e.death_count,
+                      e.injury_count,
+                      e.malfunction_count,
+                      e.recall_count,
+                      (e.recall_rate * 100).toFixed(1),
+                      e.severity_score,
+                      (e as Manufacturer).supply_chain_risk_score,
+                      e.recall_risk_score,
+                      e.projected_event_rate_trend,
+                    ]
+              )}
+            />
+          )}
+          <Link href="/" className="text-sm text-brand-600 hover:underline">← Back to search</Link>
+        </div>
       </div>
 
       {/* ── Empty state ── */}
