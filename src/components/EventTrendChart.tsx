@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import {
   LineChart,
   Line,
@@ -10,8 +11,8 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from 'recharts'
-import { format, parse, addMonths } from 'date-fns'
-import type { MonthlyDataPoint, EventRateTrend } from '@/lib/types'
+import { format, parse, addMonths, subMonths } from 'date-fns'
+import type { EventRateTrend } from '@/lib/types'
 
 interface EventTrendChartProps {
   eventsByMonth: Record<string, number>
@@ -26,6 +27,28 @@ interface ChartPoint {
   projected?: number
 }
 
+type Timeframe = 1 | 3 | 6 | 12 | 'all'
+const TIMEFRAMES: { label: string; value: Timeframe }[] = [
+  { label: '1M',  value: 1 },
+  { label: '3M',  value: 3 },
+  { label: '6M',  value: 6 },
+  { label: '12M', value: 12 },
+  { label: 'All', value: 'all' },
+]
+
+function filterByTimeframe(
+  eventsByMonth: Record<string, number>,
+  timeframe: Timeframe,
+): Record<string, number> {
+  if (timeframe === 'all') return eventsByMonth
+  const sorted = Object.keys(eventsByMonth).sort()
+  if (sorted.length === 0) return {}
+  const lastKey  = sorted[sorted.length - 1]
+  const lastDate = parse(lastKey, 'yyyy-MM', new Date())
+  const cutoff   = format(subMonths(lastDate, timeframe - 1), 'yyyy-MM')
+  return Object.fromEntries(Object.entries(eventsByMonth).filter(([k]) => k >= cutoff))
+}
+
 function toChartData(
   eventsByMonth: Record<string, number>,
   trend: EventRateTrend = 'UNKNOWN',
@@ -34,7 +57,6 @@ function toChartData(
   const sorted = Object.entries(eventsByMonth).sort(([a], [b]) => a.localeCompare(b))
   if (sorted.length === 0) return []
 
-  // Historical points
   const historical: ChartPoint[] = sorted.map(([key, events]) => {
     const date = parse(key, 'yyyy-MM', new Date())
     return { month: format(date, 'MMM yy'), events }
@@ -42,7 +64,6 @@ function toChartData(
 
   if (trend === 'UNKNOWN' || projectMonths === 0) return historical
 
-  // Derive growth rate from actual month-over-month data (last 4 months)
   const recent4 = sorted.slice(-4).map(([, v]) => v)
   const empiricalRates: number[] = []
   for (let i = 1; i < recent4.length; i++) {
@@ -54,18 +75,14 @@ function toChartData(
     empiricalRates.length > 0
       ? empiricalRates.reduce((a, b) => a + b, 0) / empiricalRates.length
       : trendPrior
-  // Blend 60% empirical + 40% trend-label prior; cap at ±20%/month
   const growthRate = Math.max(-0.20, Math.min(0.20, empirical * 0.6 + trendPrior * 0.4))
 
-  // Last real date to start projecting from
-  const lastKey = sorted[sorted.length - 1][0]
-  const lastDate = parse(lastKey, 'yyyy-MM', new Date())
+  const lastKey   = sorted[sorted.length - 1][0]
+  const lastDate  = parse(lastKey, 'yyyy-MM', new Date())
   const lastValue = sorted[sorted.length - 1][1]
 
-  // Bridge: last historical point carries both events and projected (ensures visual continuity)
   historical[historical.length - 1].projected = lastValue
 
-  // Project from lastValue (not avgRecent) to avoid visual jump at the bridge point
   const projections: ChartPoint[] = Array.from({ length: projectMonths }, (_, i) => {
     const projDate  = addMonths(lastDate, i + 1)
     const projected = Math.max(0, Math.round(lastValue * Math.pow(1 + growthRate, i + 1)))
@@ -81,27 +98,47 @@ export default function EventTrendChart({
   trend = 'UNKNOWN',
   projectMonths = 3,
 }: EventTrendChartProps) {
-  const data = toChartData(eventsByMonth, trend, projectMonths)
+  const [timeframe, setTimeframe] = useState<Timeframe>(12)
+
+  const filtered     = filterByTimeframe(eventsByMonth, timeframe)
+  const data         = toChartData(filtered, trend, projectMonths)
   const hasProjection = trend !== 'UNKNOWN' && projectMonths > 0
-  // Index where projection starts (last historical point)
-  const splitMonth = data.findLast?.((d) => d.events !== undefined)?.month
+  const splitMonth   = data.findLast?.((d) => d.events !== undefined)?.month
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold text-gray-700">{title}</h3>
-        {hasProjection && (
-          <div className="flex items-center gap-3 text-[10px] text-gray-400">
-            <span className="flex items-center gap-1">
-              <span className="inline-block h-0.5 w-4 bg-blue-500" />
-              Actual
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="inline-block h-0.5 w-4 border-t-2 border-dashed border-blue-300" />
-              Projected
-            </span>
+        <div className="flex items-center gap-2">
+          {/* Timeframe selector */}
+          <div className="flex rounded-lg border border-gray-200 bg-gray-50 p-0.5 gap-0.5">
+            {TIMEFRAMES.map((tf) => (
+              <button
+                key={tf.value}
+                onClick={() => setTimeframe(tf.value)}
+                className={`rounded-md px-2 py-0.5 text-[11px] font-medium transition-colors ${
+                  timeframe === tf.value
+                    ? 'bg-white text-brand-700 shadow-sm'
+                    : 'text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                {tf.label}
+              </button>
+            ))}
           </div>
-        )}
+          {hasProjection && (
+            <div className="flex items-center gap-3 text-[10px] text-gray-400">
+              <span className="flex items-center gap-1">
+                <span className="inline-block h-0.5 w-4 bg-blue-500" />
+                Actual
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="inline-block h-0.5 w-4 border-t-2 border-dashed border-blue-300" />
+                Projected
+              </span>
+            </div>
+          )}
+        </div>
       </div>
       <ResponsiveContainer width="100%" height={220}>
         <LineChart data={data} margin={{ top: 4, right: 12, left: 0, bottom: 0 }}>
@@ -133,7 +170,6 @@ export default function EventTrendChart({
               name === 'projected' ? 'Projected events' : 'Events',
             ]}
           />
-          {/* Divider between actual and projected */}
           {hasProjection && splitMonth && (
             <ReferenceLine
               x={splitMonth}
@@ -142,7 +178,6 @@ export default function EventTrendChart({
               label={{ value: 'Last data', position: 'insideTopRight', fontSize: 10, fill: '#9ca3af' }}
             />
           )}
-          {/* Actual line */}
           <Line
             type="monotone"
             dataKey="events"
@@ -152,7 +187,6 @@ export default function EventTrendChart({
             activeDot={{ r: 4 }}
             connectNulls={false}
           />
-          {/* Projected line — dashed */}
           {hasProjection && (
             <Line
               type="monotone"
