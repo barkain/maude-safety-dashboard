@@ -89,12 +89,12 @@ export default async function ManufacturerPage({ params }: Props) {
           <div className="mt-1 flex flex-wrap items-center gap-3">
             {mfr.country && <span className="text-sm text-gray-500">{mfr.country}</span>}
             <a
-              href={`https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfrl/rl.cfm?start_search=1&firm_name=${encodeURIComponent(toRegistrationName(mfr.name))}`}
+              href={`https://www.fda.gov/search?s=${encodeURIComponent(toRegistrationName(mfr.name))}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 text-xs text-brand-600 hover:underline"
             >
-              FDA Establishment Registration ↗
+              Search FDA.gov ↗
             </a>
           </div>
         </div>
