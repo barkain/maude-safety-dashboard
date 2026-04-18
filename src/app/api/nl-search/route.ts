@@ -179,36 +179,26 @@ async function nlSearch(query: string): Promise<{ results: SearchResult[]; summa
       : Promise.resolve([]),
   ])
 
-  // "Subject keywords" = terms that identify a device/mfr, excluding pure filter words
+  // "Subject keywords" = device/mfr terms, excluding pure filter modifiers
   const FILTER_WORDS = new Set(['high', 'low', 'medium', 'risk', 'recall', 'recalls', 'death', 'deaths', 'injury', 'injuries'])
   const subjectKeywords = keywords.filter((kw) => !FILTER_WORDS.has(kw.toLowerCase()))
   const rawTokensSubject = tokens.filter((t) => !FILTER_WORDS.has(t))
+  const allSearchTokens = [...rawTokensSubject, ...subjectKeywords]
 
-  let allCandidates: SearchResult[] = [
+  let results: SearchResult[] = [
     ...dedup([...rawMfrs, ...kwMfrs]).map((m) => ({ kind: 'manufacturer' as const, data: m })),
     ...dedup([...rawDevs, ...kwDevs]).map((d) => ({ kind: 'device' as const, data: d })),
   ]
 
-  // Apply has_deaths filter (hard — no point relaxing)
-  if (intent.has_deaths === true) allCandidates = allCandidates.filter((r) => r.data.death_count > 0)
+  // Apply filters strictly — if the user asked for HIGH risk knee devices and there
+  // are none in the DB, we return zero results (honest) rather than relaxing the filter.
+  if (intent.risk_tier)            results = results.filter((r) => r.data.risk_tier === intent.risk_tier)
+  if (intent.has_deaths === true)  results = results.filter((r) => r.data.death_count > 0)
 
-  // Apply risk_tier filter, but only if it still leaves results OR there were no subject keywords
-  let results: SearchResult[] = allCandidates
-  if (intent.risk_tier) {
-    const filtered = allCandidates.filter((r) => r.data.risk_tier === intent.risk_tier)
-    if (filtered.length > 0 || subjectKeywords.length === 0) {
-      // Filter worked, or it's a pure-filter query — apply it
-      results = filtered
-    }
-    // else: subject keywords found candidates but wrong tier → keep all candidates and
-    // let relevance sort push the right-tier ones to the top
-  }
+  results = sortByRelevance(results, allSearchTokens, intent.sort_by)
 
-  results = sortByRelevance(results, [...rawTokensSubject, ...subjectKeywords], intent.sort_by ?? (intent.risk_tier ? 'risk' : undefined))
-
-  // Pure-filter fallback: query had NO subject keywords (e.g. "show high risk manufacturers")
-  // Do NOT use this fallback when subject keywords existed — that means the entity just
-  // isn't in our DB and we should return an honest empty/partial result.
+  // Pure-filter fallback ONLY: query had no subject keywords (e.g. "show high risk manufacturers")
+  // Never fall back when a subject keyword exists — wrong results are worse than no results.
   if (results.length === 0 && subjectKeywords.length === 0 && (intent.risk_tier || intent.has_deaths)) {
     const [topM, topD] = await Promise.all([getTopManufacturers(50), getTopDevices(50)])
     let fb: SearchResult[] = [
