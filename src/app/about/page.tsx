@@ -23,7 +23,7 @@ export default function AboutPage() {
 
         <h2 className="pt-2 text-base font-semibold text-gray-800">Data Coverage</h2>
         <ul className="list-disc space-y-1 pl-5">
-          <li>600,000+ adverse event records from 2024–2025</li>
+          <li>600,000+ adverse event records from 2024–2026</li>
           <li>Covers manufacturers, device types, and event outcomes</li>
           <li>Recall data cross-referenced from FDA recall database</li>
         </ul>

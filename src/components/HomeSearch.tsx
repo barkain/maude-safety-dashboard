@@ -16,7 +16,7 @@ const NL_EXAMPLES = [
 ]
 
 const HEADLINE_STATS = [
-  { label: 'Total Events (2024-25)', value: '600K+',   sub: 'MAUDE reports analysed',         accent: 'blue'    },
+  { label: 'Total Events (2024-26)', value: '600K+',   sub: 'MAUDE reports analysed',         accent: 'blue'    },
   { label: 'Manufacturers Tracked',  value: '2,086',   sub: 'Unique reporting entities',       accent: 'green'   },
   { label: 'Device Types',           value: '5,555',   sub: 'Across all product codes',        accent: 'default' },
   { label: 'High Risk Entities',     value: '181',     sub: 'Flagged for procurement review',  accent: 'orange'  },
@@ -208,7 +208,7 @@ export default function HomeSearch({ topMfrs, topDevices, highRiskMfrs, highRisk
       <section className="bg-gradient-to-br from-brand-700 via-brand-600 to-brand-500 px-4 py-16 text-white sm:px-6 sm:py-20">
         <div className="mx-auto max-w-3xl text-center">
           <span className="mb-4 inline-block rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-widest">
-            FDA MAUDE Data — 2024–2025
+            FDA MAUDE Data — 2024–2026
           </span>
           <h1 className="mt-4 text-3xl font-extrabold leading-tight sm:text-5xl">
             Medical Device Adverse&nbsp;Event Dashboard
