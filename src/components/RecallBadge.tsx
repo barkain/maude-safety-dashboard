@@ -49,8 +49,9 @@ export default function RecallBadge({ rate, tier, count, size = 'md' }: RecallBa
           size === 'sm' ? 'h-1.5 w-1.5' : 'h-2 w-2',
         )}
       />
-      {label} Recall Risk
-      {count !== undefined && (
+      {/* sm cards: show only tier label; md: show full "X Recall Risk" */}
+      {size === 'sm' ? label : `${label} Recall Risk`}
+      {count !== undefined && size !== 'sm' && (
         <span className="ml-1 opacity-70">({count} recalls)</span>
       )}
     </span>
