@@ -4,6 +4,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { useEffect, useState, useMemo, useCallback, Suspense } from 'react'
 import Link from 'next/link'
 import { formatEventCount } from '@/lib/search'
+import CompareToggleButton from '@/components/CompareToggleButton'
 import type { SearchResult } from '@/lib/types'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -55,12 +56,15 @@ function ResultCard({ result }: { result: SearchResult }) {
           <p className="mt-1.5 font-semibold text-gray-900 leading-snug">{name}</p>
           <p className="mt-0.5 text-xs text-gray-400 truncate">{sub}</p>
         </div>
-        <div className="shrink-0 text-right text-xs text-gray-500 space-y-1">
-          <div><span className="font-semibold text-gray-800">{formatEventCount(d.total_events)}</span> events</div>
-          {d.death_count > 0 && (
-            <div className="text-red-600 font-semibold">{formatEventCount(d.death_count)} deaths</div>
-          )}
-          <div>{d.recall_count} recall{d.recall_count !== 1 ? 's' : ''}</div>
+        <div className="flex shrink-0 items-start gap-2">
+          <div className="text-right text-xs text-gray-500 space-y-1">
+            <div><span className="font-semibold text-gray-800">{formatEventCount(d.total_events)}</span> events</div>
+            {d.death_count > 0 && (
+              <div className="text-red-600 font-semibold">{formatEventCount(d.death_count)} deaths</div>
+            )}
+            <div>{d.recall_count} recall{d.recall_count !== 1 ? 's' : ''}</div>
+          </div>
+          <CompareToggleButton id={d.id} type={isManufacturer ? 'manufacturer' : 'device'} />
         </div>
       </div>
     </Link>

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { formatEventCount } from '@/lib/search'
 import RecallBadge from './RecallBadge'
 import TrendBadge from './TrendBadge'
+import CompareToggleButton from './CompareToggleButton'
 import type { Manufacturer } from '@/lib/types'
 
 interface ManufacturerCardProps {
@@ -19,7 +20,10 @@ export default function ManufacturerCard({ manufacturer: m }: ManufacturerCardPr
           <p className="truncate font-semibold text-gray-900">{m.name}</p>
           <p className="text-xs text-gray-400">{m.country}</p>
         </div>
-        <RecallBadge tier={m.risk_tier} size="sm" />
+        <div className="flex shrink-0 items-center gap-1.5">
+          <RecallBadge tier={m.risk_tier} size="sm" />
+          <CompareToggleButton id={m.id} type="manufacturer" />
+        </div>
       </div>
 
       <div className="mt-3 grid grid-cols-3 gap-2 text-center text-sm">

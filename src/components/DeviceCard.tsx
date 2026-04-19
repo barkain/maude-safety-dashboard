@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { formatEventCount } from '@/lib/search'
 import RecallBadge from './RecallBadge'
 import TrendBadge from './TrendBadge'
+import CompareToggleButton from './CompareToggleButton'
 import type { Device } from '@/lib/types'
 
 interface DeviceCardProps {
@@ -27,9 +28,12 @@ export default function DeviceCard({ device }: DeviceCardProps) {
           <p className="truncate font-semibold text-gray-900">{device.brand_name}</p>
           <p className="truncate text-sm text-gray-500">{device.generic_name}</p>
         </div>
-        <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>
-          {device.device_class}
-        </span>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>
+            {device.device_class}
+          </span>
+          <CompareToggleButton id={device.id} type="device" />
+        </div>
       </div>
 
       <p className="mt-1 text-xs text-gray-400">{device.manufacturer_name}</p>
