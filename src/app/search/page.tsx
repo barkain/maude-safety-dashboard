@@ -211,7 +211,7 @@ function SearchResults() {
       {/* ── Filter bar ── */}
       {!loading && allResults.length > 0 && (
         <div className="mb-5 rounded-xl border border-gray-200 bg-gray-50 p-4">
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
 
             {/* Type filter */}
             <div>
@@ -241,7 +241,7 @@ function SearchResults() {
             </div>
 
             {/* Sort */}
-            <div className="ml-auto">
+            <div className="sm:ml-auto">
               <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Sort by</p>
               <div className="flex flex-wrap gap-1.5">
                 <Pill active={sortField === 'events'}  onClick={() => setSort('events')}>Events</Pill>

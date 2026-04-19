@@ -132,13 +132,13 @@ export default function CompareTable({ entities }: CompareTableProps) {
         {/* Column headers — one per entity */}
         <thead>
           <tr className="border-b border-gray-200">
-            <th className="w-36 px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">
+            <th className="w-24 px-2 py-3 text-left sm:w-36 sm:px-4 text-xs font-semibold text-gray-400 uppercase tracking-wide">
               Metric
             </th>
             {entities.map((e) => (
               <th
                 key={e.id}
-                className="px-4 py-3 text-center text-xs font-semibold text-gray-800"
+                className="px-2 py-3 text-center text-xs font-semibold text-gray-800 sm:px-4"
               >
                 {getEntityName(e)}
               </th>
@@ -154,13 +154,13 @@ export default function CompareTable({ entities }: CompareTableProps) {
 
             return (
               <tr key={row.label} className="border-b border-gray-100 last:border-0">
-                <td className="px-4 py-2.5 text-xs text-gray-500">{row.label}</td>
+                <td className="px-2 py-2.5 text-xs text-gray-500 sm:px-4">{row.label}</td>
                 {entities.map((e, i) => {
                   const val = values[i]
                   return (
                     <td
                       key={e.id}
-                      className={`px-4 py-2.5 text-center text-sm ${rankColor(ranks[i])}`}
+                      className={`px-2 py-2.5 text-center text-sm sm:px-4 ${rankColor(ranks[i])}`}
                     >
                       {val !== null ? row.format(val) : '—'}
                     </td>
@@ -172,7 +172,7 @@ export default function CompareTable({ entities }: CompareTableProps) {
 
           {/* Risk tier row */}
           <tr className="border-b border-gray-100">
-            <td className="px-4 py-2.5 text-xs text-gray-500">Risk Tier</td>
+            <td className="px-2 py-2.5 text-xs text-gray-500 sm:px-4">Risk Tier</td>
             {entities.map((e) => {
               const tierColors: Record<string, string> = {
                 HIGH:   'bg-red-100 text-red-700',
@@ -181,7 +181,7 @@ export default function CompareTable({ entities }: CompareTableProps) {
               }
               const tier = e.risk_tier ?? 'UNKNOWN'
               return (
-                <td key={e.id} className="px-4 py-2.5 text-center">
+                <td key={e.id} className="px-2 py-2.5 text-center sm:px-4">
                   <span
                     className={`inline-flex rounded-full px-2 py-0.5 text-xs font-bold ${
                       tierColors[tier] ?? 'bg-gray-100 text-gray-500'
@@ -196,9 +196,9 @@ export default function CompareTable({ entities }: CompareTableProps) {
 
           {/* Event rate trend row */}
           <tr>
-            <td className="px-4 py-2.5 text-xs text-gray-500">Event Rate Trend</td>
+            <td className="px-2 py-2.5 text-xs text-gray-500 sm:px-4">Event Rate Trend</td>
             {entities.map((e) => (
-              <td key={e.id} className="px-4 py-2.5 text-center">
+              <td key={e.id} className="px-2 py-2.5 text-center sm:px-4">
                 <TrendBadge trend={e.projected_event_rate_trend ?? 'UNKNOWN'} size="sm" />
               </td>
             ))}

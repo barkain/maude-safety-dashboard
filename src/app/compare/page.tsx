@@ -168,8 +168,12 @@ export default async function ComparePage({ searchParams }: Props) {
         <>
           {/* ── Entity overview cards ── */}
           <div
-            className="mb-6 grid gap-4"
-            style={{ gridTemplateColumns: `repeat(${Math.min(n, 4)}, minmax(0, 1fr))` }}
+            className={`mb-6 grid gap-4 ${
+              n === 1 ? '' :
+              n === 2 ? 'sm:grid-cols-2' :
+              n === 3 ? 'sm:grid-cols-2 lg:grid-cols-3' :
+                        'sm:grid-cols-2 lg:grid-cols-4'
+            }`}
           >
             {entities.map((e) => (
               <div key={e.id} className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">

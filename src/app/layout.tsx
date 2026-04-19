@@ -27,7 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   MAUDE Dashboard
                 </span>
               </a>
-              <nav className="flex items-center gap-4 text-sm text-gray-500">
+              <nav className="flex items-center gap-3 text-sm text-gray-500 sm:gap-4">
                 <CompareNavItem />
                 <a href="/risk" className="hover:text-brand-600 transition-colors font-medium text-red-600">Risk ↑</a>
                 <a href="/about" className="hover:text-brand-600 transition-colors">About</a>
@@ -35,7 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   href="https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfmaude/search.cfm"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-brand-600 transition-colors"
+                  className="hidden sm:block hover:text-brand-600 transition-colors"
                 >
                   FDA Source
                 </a>
