@@ -404,7 +404,7 @@ export default function HomeSearch({ topMfrs, topDevices, highRiskMfrs, highRisk
 
                 {/* ── Flat view ── */}
                 {!groupByMfr && (
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {results!.map((r) =>
                       r.kind === 'manufacturer' ? (
                         <ManufacturerCard key={r.data.id} manufacturer={r.data as Manufacturer} />
@@ -467,7 +467,7 @@ export default function HomeSearch({ topMfrs, topDevices, highRiskMfrs, highRisk
 
                           {/* Devices grid */}
                           {group.devices.length > 0 && (
-                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                               {group.devices.map((d) => (
                                 <DeviceCard key={d.id} device={d} />
                               ))}
@@ -499,7 +499,7 @@ export default function HomeSearch({ topMfrs, topDevices, highRiskMfrs, highRisk
                   <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">HIGH risk</span>
                   <span className="ml-auto hidden text-xs text-gray-400 sm:block">Flagged by supply chain risk score</span>
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {highRiskMfrs.map((m) => <ManufacturerCard key={m.id} manufacturer={m as Manufacturer} />)}
                   {highRiskDevices.map((d) => <DeviceCard key={d.id} device={d as Device} />)}
                 </div>
@@ -520,7 +520,7 @@ export default function HomeSearch({ topMfrs, topDevices, highRiskMfrs, highRisk
                 <h2 className="text-lg font-bold text-gray-900">Top Manufacturers by Events</h2>
                 <span className="hidden text-xs text-gray-400 sm:block">Ranked by total adverse event reports</span>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {topMfrs.map((m) => <ManufacturerCard key={m.id} manufacturer={m as Manufacturer} />)}
               </div>
             </section>
@@ -531,7 +531,7 @@ export default function HomeSearch({ topMfrs, topDevices, highRiskMfrs, highRisk
                 <h2 className="text-lg font-bold text-gray-900">Top Devices by Events</h2>
                 <span className="hidden text-xs text-gray-400 sm:block">Ranked by total adverse event reports</span>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {topDevices.map((d) => <DeviceCard key={d.id} device={d as Device} />)}
               </div>
             </section>

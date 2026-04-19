@@ -160,7 +160,7 @@ export default async function ManufacturerPage({ params }: Props) {
             AI estimate — not sourced from real supply chain data
           </span>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {/* Gauge */}
           <div className="lg:col-span-2">
             <RiskScoreGauge
@@ -244,7 +244,7 @@ export default async function ManufacturerPage({ params }: Props) {
       <section className="mt-8">
         <h2 className="mb-3 text-base font-semibold text-gray-800">Top Reported Devices</h2>
         {deviceStubs.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {deviceStubs.map((d) => (
               <DeviceCard key={d.id} device={d} />
             ))}

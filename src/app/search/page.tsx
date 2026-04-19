@@ -293,7 +293,7 @@ function SearchResults() {
               <span> (filtered from {allResults.length})</span>
             )}
           </p>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {results.map((r, i) => <ResultCard key={i} result={r} />)}
           </div>
         </>
