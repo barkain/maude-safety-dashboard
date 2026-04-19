@@ -1,74 +1,27 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import {
-  readCompareIds,
-  readCompareType,
-  writeCompareIds,
-  COMPARE_CHANGE_EVENT,
-} from './CompareSelector'
+import { useCompareState } from '@/hooks/useCompareState'
 
 interface CompareToggleButtonProps {
   id: string
   type: 'manufacturer' | 'device'
 }
 
-const MAX_ITEMS = 4
-
 export default function CompareToggleButton({ id, type }: CompareToggleButtonProps) {
-  const [isSelected, setIsSelected] = useState(false)
-  const [count, setCount] = useState(0)
-  const [currentType, setCurrentType] = useState<'manufacturer' | 'device' | null>(null)
-
-  function sync() {
-    const stored = readCompareIds()
-    setIsSelected(stored.includes(id))
-    setCount(stored.length)
-    setCurrentType(readCompareType())
-  }
-
-  useEffect(() => {
-    sync()
-    window.addEventListener(COMPARE_CHANGE_EVENT, sync)
-    return () => window.removeEventListener(COMPARE_CHANGE_EVENT, sync)
-  }, [id])
+  const { isSelected, typeMismatch, atMax, tooltip, toggle } = useCompareState(id, type)
 
   function handleClick(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
-
-    const stored = readCompareIds()
-    if (stored.includes(id)) {
-      const next = stored.filter((x) => x !== id)
-      writeCompareIds(next, next.length > 0 ? type : undefined)
-      return
-    }
-    // Different type in basket — clear and start fresh
-    if (currentType && currentType !== type) {
-      writeCompareIds([id], type)
-      return
-    }
-    if (stored.length >= MAX_ITEMS) return
-    writeCompareIds([...stored, id], type)
+    toggle()
   }
-
-  const typeMismatch = !isSelected && count > 0 && currentType !== null && currentType !== type
-  const atMax = !isSelected && !typeMismatch && count >= MAX_ITEMS
-
-  const tooltip = isSelected
-    ? 'Remove from comparison'
-    : typeMismatch
-    ? `Currently comparing ${currentType}s — click to start a new comparison`
-    : atMax
-    ? 'Maximum 4 items for comparison'
-    : 'Add to comparison'
 
   return (
     <button
       onClick={handleClick}
       disabled={atMax}
       title={tooltip}
-      className={`group/cmp relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-sm font-bold shadow-sm transition ${
+      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-sm font-bold shadow-sm transition ${
         isSelected
           ? 'border-brand-400 bg-brand-50 text-brand-700 hover:bg-red-50 hover:text-red-600 hover:border-red-300'
           : typeMismatch

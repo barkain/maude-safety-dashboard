@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCompareState } from '@/hooks/useCompareState'
 
 interface CompareSelectorProps {
   id: string
@@ -11,7 +11,6 @@ interface CompareSelectorProps {
 export const COMPARE_STORAGE_KEY  = 'maude_compare_ids'
 export const COMPARE_TYPE_KEY     = 'maude_compare_type'
 export const COMPARE_CHANGE_EVENT = 'maude_compare_change'
-const MAX_ITEMS = 4
 
 export function readCompareIds(): string[] {
   if (typeof window === 'undefined') return []
@@ -32,50 +31,14 @@ export function writeCompareIds(ids: string[], type?: 'manufacturer' | 'device')
 }
 
 export default function CompareSelector({ id, type }: CompareSelectorProps) {
-  const [isSelected,   setIsSelected]   = useState(false)
-  const [count,        setCount]        = useState(0)
-  const [currentType,  setCurrentType]  = useState<'manufacturer' | 'device' | null>(null)
-
-  function sync() {
-    const stored = readCompareIds()
-    setIsSelected(stored.includes(id))
-    setCount(stored.length)
-    setCurrentType(readCompareType())
-  }
-
-  useEffect(() => {
-    sync()
-    window.addEventListener(COMPARE_CHANGE_EVENT, sync)
-    return () => window.removeEventListener(COMPARE_CHANGE_EVENT, sync)
-  }, [id])
-
-  function toggle() {
-    const stored = readCompareIds()
-    let next: string[]
-    if (stored.includes(id)) {
-      next = stored.filter((x) => x !== id)
-      writeCompareIds(next, next.length > 0 ? type : undefined)
-    } else {
-      // If basket has a different type, clear it and start fresh
-      if (currentType && currentType !== type) {
-        writeCompareIds([id], type)
-        return
-      }
-      if (stored.length >= MAX_ITEMS) return
-      next = [...stored, id]
-      writeCompareIds(next, type)
-    }
-  }
-
-  const typeMismatch = !isSelected && count > 0 && currentType !== null && currentType !== type
-  const atMax        = !isSelected && !typeMismatch && count >= MAX_ITEMS
+  const { isSelected, typeMismatch, atMax, toggle } = useCompareState(id, type)
 
   return (
     <button
       onClick={toggle}
       disabled={atMax}
       title={
-        typeMismatch ? `Currently comparing ${currentType}s — click to start a new comparison`
+        typeMismatch ? `Currently comparing ${type}s — click to start a new comparison`
         : atMax      ? 'Maximum 4 items for comparison'
         : undefined
       }
