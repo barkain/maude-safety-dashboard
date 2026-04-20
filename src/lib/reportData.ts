@@ -86,6 +86,76 @@ export async function getAlternativeDevices(device: Device): Promise<Device[]> {
 }
 
 /**
+ * Generate a 3–4 sentence plain-English manufacturer portfolio summary for a GPO/VAC audience.
+ * Returns null if no API key or on error. Cached 24 h.
+ */
+export async function generateManufacturerSummary(
+  mfr: {
+    name: string
+    total_events: number
+    death_count: number
+    injury_count: number
+    recall_count: number
+    risk_tier: string
+    severity_score: number
+    supply_chain_summary?: string
+    specialties?: string[]
+    top_device_names?: string[]
+  }
+): Promise<string | null> {
+  const apiKey = process.env.OPENAI_API_KEY
+  const baseUrl = process.env.OPENAI_BASE_URL ?? 'https://api.openai.com'
+  const model = process.env.OPENAI_MODEL ?? 'gpt-4o-mini'
+  if (!apiKey) return null
+
+  const deathRate =
+    mfr.total_events > 0
+      ? ((mfr.death_count / mfr.total_events) * 100).toFixed(1)
+      : '0'
+  const specialtyList = mfr.specialties?.slice(0, 4).join(', ') || 'various'
+  const topDevices = mfr.top_device_names?.slice(0, 5).join(', ') || 'not listed'
+
+  const prompt = `You are a medical device procurement analyst writing for a hospital Value Analysis Committee (VAC) or Group Purchasing Organization (GPO). Summarize this manufacturer's adverse event profile in 3–4 sentences. Be factual and direct. Focus on what a procurement officer needs to know when evaluating a supplier contract.
+
+Manufacturer: ${mfr.name}
+Risk Tier: ${mfr.risk_tier}
+Total adverse events in dataset: ${mfr.total_events.toLocaleString()}
+Deaths: ${mfr.death_count} (${deathRate}% of events)
+Injuries: ${mfr.injury_count.toLocaleString()}
+Recalls: ${mfr.recall_count}
+Severity Score: ${Math.min(Math.round(mfr.severity_score), 100)}/100
+Medical specialties: ${specialtyList}
+Top devices by event volume: ${topDevices}
+
+Write only the 3–4 sentence summary. No preamble, no headers, no disclaimers.`
+
+  try {
+    const res = await fetch(`${baseUrl}/v1/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model,
+        max_tokens: 200,
+        temperature: 0,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a medical device procurement analyst. Write concise, factual summaries for hospital procurement staff. No marketing language.',
+          },
+          { role: 'user', content: prompt },
+        ],
+      }),
+      next: { revalidate: 86400 },
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    return data?.choices?.[0]?.message?.content?.trim() ?? null
+  } catch {
+    return null
+  }
+}
+
+/**
  * Generate a 3–4 sentence plain-English incident summary for a VAC audience.
  * Uses the OpenAI-compatible endpoint (Claude API or configured model).
  * Returns null if no API key is configured or on any error.

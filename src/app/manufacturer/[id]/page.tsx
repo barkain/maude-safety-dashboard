@@ -12,6 +12,7 @@ import RiskScoreGauge from '@/components/RiskScoreGauge'
 import TrendBadge from '@/components/TrendBadge'
 import CompareSelector from '@/components/CompareSelector'
 import CsvExportButton from '@/components/CsvExportButton'
+import GenerateManufacturerReportButton from '@/components/GenerateManufacturerReportButton'
 import type { Device } from '@/lib/types'
 
 interface Props {
@@ -110,6 +111,7 @@ export default async function ManufacturerPage({ params }: Props) {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <RecallBadge rate={mfr.recall_rate} count={mfr.recall_count} />
+          <GenerateManufacturerReportButton manufacturerId={mfr.id} />
           <CompareSelector id={mfr.id} name={mfr.name} type="manufacturer" />
           <CsvExportButton
             filename={`maude-${mfr.id}-${new Date().toISOString().slice(0,10)}`}
@@ -246,7 +248,17 @@ export default async function ManufacturerPage({ params }: Props) {
         {deviceStubs.length > 0 ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {deviceStubs.map((d) => (
-              <DeviceCard key={d.id} device={d} />
+              <div key={d.id} className="flex flex-col gap-1.5">
+                <DeviceCard device={d} />
+                <a
+                  href={`/report/device/${encodeURIComponent(d.id)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="self-start rounded px-2 py-0.5 text-[11px] font-medium text-brand-600 hover:text-brand-800 hover:underline"
+                >
+                  VAC Report ↗
+                </a>
+              </div>
             ))}
           </div>
         ) : (
