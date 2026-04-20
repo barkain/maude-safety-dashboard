@@ -15,6 +15,9 @@ import {
 import { getDb } from './firebase'
 import type { Device } from './types'
 
+const USE_MOCK = !process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
+                 process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID === 'your-project-id'
+
 function snapToDevice(snap: DocumentData, id: string): Device {
   return { id, ...snap } as Device
 }
@@ -25,47 +28,57 @@ function snapToDevice(snap: DocumentData, id: string): Device {
  * Falls back to product_code match if specialty yields <2 results.
  */
 export async function getAlternativeDevices(device: Device): Promise<Device[]> {
+  if (USE_MOCK) return []
+
   const results: Device[] = []
   const seen = new Set<string>()
 
   // Primary: same medical_specialty, sorted by total_events desc
   if (device.medical_specialty) {
-    const q = query(
-      collection(getDb(), 'devices'),
-      where('medical_specialty', '==', device.medical_specialty),
-      orderBy('total_events', 'desc'),
-      fsLimit(12),
-    )
-    const snap = await getDocs(q)
-    for (const d of snap.docs) {
-      if (d.id === device.id) continue
-      const dev = snapToDevice(d.data(), d.id)
-      // Exclude same manufacturer and duplicates
-      if (dev.manufacturer_id === device.manufacturer_id) continue
-      if (seen.has(d.id)) continue
-      seen.add(d.id)
-      results.push(dev)
-      if (results.length >= 3) break
+    try {
+      const q = query(
+        collection(getDb(), 'devices'),
+        where('medical_specialty', '==', device.medical_specialty),
+        orderBy('total_events', 'desc'),
+        fsLimit(12),
+      )
+      const snap = await getDocs(q)
+      for (const d of snap.docs) {
+        if (d.id === device.id) continue
+        const dev = snapToDevice(d.data(), d.id)
+        // Exclude same manufacturer and duplicates
+        if (dev.manufacturer_id === device.manufacturer_id) continue
+        if (seen.has(d.id)) continue
+        seen.add(d.id)
+        results.push(dev)
+        if (results.length >= 3) break
+      }
+    } catch {
+      // Specialty query failed — fall through to product_code fallback
     }
   }
 
   // Fallback: same product_code (same device type, different manufacturers)
   if (results.length < 2 && device.product_code) {
-    const q = query(
-      collection(getDb(), 'devices'),
-      where('product_code', '==', device.product_code),
-      orderBy('total_events', 'desc'),
-      fsLimit(10),
-    )
-    const snap = await getDocs(q)
-    for (const d of snap.docs) {
-      if (d.id === device.id) continue
-      const dev = snapToDevice(d.data(), d.id)
-      if (dev.manufacturer_id === device.manufacturer_id) continue
-      if (seen.has(d.id)) continue
-      seen.add(d.id)
-      results.push(dev)
-      if (results.length >= 3) break
+    try {
+      const q = query(
+        collection(getDb(), 'devices'),
+        where('product_code', '==', device.product_code),
+        orderBy('total_events', 'desc'),
+        fsLimit(10),
+      )
+      const snap = await getDocs(q)
+      for (const d of snap.docs) {
+        if (d.id === device.id) continue
+        const dev = snapToDevice(d.data(), d.id)
+        if (dev.manufacturer_id === device.manufacturer_id) continue
+        if (seen.has(d.id)) continue
+        seen.add(d.id)
+        results.push(dev)
+        if (results.length >= 3) break
+      }
+    } catch {
+      // Product code query failed — return whatever we have
     }
   }
 
