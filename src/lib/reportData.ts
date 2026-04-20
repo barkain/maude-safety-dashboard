@@ -130,7 +130,6 @@ Write only the 3–4 sentence summary. No preamble, no headers.`
           { role: 'user', content: prompt },
         ],
       }),
-      // @ts-expect-error — Next.js extended fetch option
       next: { revalidate: 86400 },
     })
     if (!res.ok) return null
