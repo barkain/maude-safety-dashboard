@@ -39,6 +39,22 @@
         { "fieldPath": "risk_tier", "order": "ASCENDING" },
         { "fieldPath": "total_events", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "devices",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "medical_specialty", "order": "ASCENDING" },
+        { "fieldPath": "total_events", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "devices",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "product_code", "order": "ASCENDING" },
+        { "fieldPath": "total_events", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
