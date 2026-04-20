@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getDevice } from '@/lib/firestore'
 import { formatEventCount } from '@/lib/search'
+import { fetchGudidDevice } from '@/lib/gudid'
 import StatCard from '@/components/StatCard'
 import RecallBadge from '@/components/RecallBadge'
 import EventTrendChart from '@/components/EventTrendChart'
@@ -20,7 +21,24 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const device = await getDevice(decodeURIComponent(params.id))
   if (!device) return { title: 'Device Not Found' }
-  return { title: `${device.brand_name} — ${device.generic_name}` }
+  const desc =
+    `${device.brand_name} safety data: ${device.total_events.toLocaleString()} adverse events, ` +
+    `${device.death_count} deaths, ${device.recall_count} recalls. ` +
+    `FDA MAUDE report analysis for ${device.generic_name}.`
+  return {
+    title: `${device.brand_name} Safety & Recall Data — ${device.generic_name}`,
+    description: desc,
+    keywords: [
+      device.brand_name,
+      device.generic_name,
+      device.manufacturer_name,
+      `${device.brand_name} safety`,
+      `${device.brand_name} recall`,
+      `${device.brand_name} FDA`,
+      `${device.generic_name} adverse events`,
+      'medical device safety',
+    ].filter(Boolean),
+  }
 }
 
 const classColors: Record<string, string> = {
@@ -115,10 +133,11 @@ export default async function DevicePage({ params }: Props) {
 
   const cls = classColors[device.device_class] ?? 'bg-gray-100 text-gray-700 ring-gray-300'
 
-  // Fetch FDA classification + AI description in parallel
-  const [fdaClass, aiDescription] = await Promise.all([
+  // Fetch FDA classification, AI description, and GUDID data in parallel
+  const [fdaClass, aiDescription, gudid] = await Promise.all([
     fetchFdaClassification(device.product_code),
     generateDeviceDescription(device.brand_name, device.generic_name),
+    fetchGudidDevice(device.brand_name, device.generic_name),
   ])
 
   const regulationUrl = fdaClass?.regulation_number
@@ -309,6 +328,114 @@ export default async function DevicePage({ params }: Props) {
               </div>
             </div>
           )}
+        </section>
+      )}
+
+      {/* ── Consumer / Patient Info (GUDID) ── */}
+      {gudid && (
+        <section className="mt-6 rounded-xl border border-blue-100 bg-blue-50 p-6 shadow-sm">
+          <div className="mb-4 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 text-blue-500">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clipRule="evenodd" />
+            </svg>
+            <h2 className="text-base font-semibold text-blue-900">Product Information</h2>
+            <span className="ml-auto text-[10px] text-blue-400">Source: FDA GUDID</span>
+          </div>
+
+          {/* Availability banner */}
+          <div className={`mb-4 flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium ${
+            gudid.commercial_distribution_status === 'In Commercial Distribution'
+              ? 'bg-green-100 text-green-800'
+              : 'bg-red-100 text-red-800'
+          }`}>
+            <span className={`h-2 w-2 rounded-full ${
+              gudid.commercial_distribution_status === 'In Commercial Distribution'
+                ? 'bg-green-500'
+                : 'bg-red-500'
+            }`} />
+            {gudid.commercial_distribution_status === 'In Commercial Distribution'
+              ? 'Currently available — in commercial distribution'
+              : gudid.commercial_distribution_status || 'Distribution status unknown'}
+          </div>
+
+          {gudid.device_description && (
+            <p className="mb-4 text-sm leading-relaxed text-blue-800">{gudid.device_description}</p>
+          )}
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {/* Rx / OTC */}
+            <div className="rounded-lg bg-white px-4 py-3 shadow-sm">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Access</p>
+              <p className="mt-0.5 text-sm font-semibold text-gray-800">
+                {gudid.is_otc ? 'Over the Counter' : gudid.is_rx ? 'Prescription Only' : '—'}
+              </p>
+            </div>
+
+            {/* Single use */}
+            <div className="rounded-lg bg-white px-4 py-3 shadow-sm">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Reusable</p>
+              <p className={`mt-0.5 text-sm font-semibold ${gudid.is_single_use ? 'text-orange-600' : 'text-green-700'}`}>
+                {gudid.is_single_use ? 'Single-use only' : 'Reusable'}
+              </p>
+            </div>
+
+            {/* Sterile */}
+            <div className="rounded-lg bg-white px-4 py-3 shadow-sm">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Sterile</p>
+              <p className="mt-0.5 text-sm font-semibold text-gray-800">
+                {gudid.is_sterile ? 'Pre-sterilized' : gudid.is_sterilization_prior_use ? 'Sterilize before use' : 'Not sterile'}
+              </p>
+            </div>
+
+            {/* MRI safety */}
+            {gudid.mri_safety && gudid.mri_safety !== 'Labeling does not contain MRI Safety Information' && (
+              <div className={`rounded-lg px-4 py-3 shadow-sm ${
+                gudid.mri_safety === 'MR Safe' ? 'bg-green-50' :
+                gudid.mri_safety === 'MR Conditional' ? 'bg-yellow-50' :
+                gudid.mri_safety === 'MR Unsafe' ? 'bg-red-50' : 'bg-white'
+              }`}>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">MRI Safety</p>
+                <p className={`mt-0.5 text-sm font-semibold ${
+                  gudid.mri_safety === 'MR Safe' ? 'text-green-700' :
+                  gudid.mri_safety === 'MR Conditional' ? 'text-yellow-700' :
+                  gudid.mri_safety === 'MR Unsafe' ? 'text-red-700' : 'text-gray-800'
+                }`}>
+                  {gudid.mri_safety}
+                </p>
+              </div>
+            )}
+
+            {/* Latex */}
+            {gudid.is_labeled_as_nrl && (
+              <div className="rounded-lg bg-orange-50 px-4 py-3 shadow-sm">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Latex</p>
+                <p className="mt-0.5 text-sm font-semibold text-orange-700">Contains natural rubber latex</p>
+              </div>
+            )}
+
+            {/* Model number */}
+            {gudid.version_or_model_number && (
+              <div className="rounded-lg bg-white px-4 py-3 shadow-sm">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Model</p>
+                <p className="mt-0.5 truncate text-sm font-medium text-gray-700">{gudid.version_or_model_number}</p>
+              </div>
+            )}
+
+            {/* FDA submission */}
+            {gudid.premarket_submissions[0] && (
+              <div className="rounded-lg bg-white px-4 py-3 shadow-sm">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">FDA Submission</p>
+                <a
+                  href={`https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfpmn/pmn.cfm?ID=${gudid.premarket_submissions[0].submission_number}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-0.5 block text-sm font-medium text-brand-600 hover:underline"
+                >
+                  {gudid.premarket_submissions[0].submission_number} ↗
+                </a>
+              </div>
+            )}
+          </div>
         </section>
       )}
 
